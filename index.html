@@ -301,11 +301,94 @@ select.t{height:46px;background:#fff}
   .pic-row .pw{min-width:120px;font-weight:700} .pic-row .pz{color:#667;font-size:14px;flex:1;min-width:80px}
   .pic-c{font-size:26px;border:2px solid #dde3ea;background:#fff;border-radius:12px;padding:2px 8px;cursor:pointer;line-height:1.3}
   .pic-c.on{border-color:#2E75B6;background:#e8f1fb} .pic-c.no{font-size:13px;padding:6px 10px}
+/* ===== 升级头像框（V1.10） ===== */
+.btnav{border:none;background:none;padding:0;cursor:pointer;line-height:0}
+.avx{--s:56px;position:relative;width:var(--s);height:var(--s);display:inline-grid;place-items:center;flex:none;vertical-align:middle;line-height:1}
+.avx>i,.avx>b,.avx>span{pointer-events:none}
+.avx .ring{position:absolute;inset:0;border-radius:50%;overflow:hidden}
+.avx .ring::before{content:'';position:absolute;inset:-30%}
+.avx .face{position:absolute;inset:calc(var(--s)*.07);border-radius:50%;display:grid;place-items:center;overflow:hidden;font-size:calc(var(--s)*.52);background:#FFF8E8;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.8)}
+.avx .face .emj{width:1em;height:1em}
+.avx .pimg{position:absolute;inset:0;background-size:cover;background-position:center}
+.avx .face::after{content:'';position:absolute;top:0;bottom:0;width:42%;left:-70%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-15deg)}
+.avx.t-free .face::after{display:none}
+.avx.t-free .ring::before{background:#E9EEF5}
+.avx .sp{position:absolute;width:calc(var(--s)*.18);height:calc(var(--s)*.18);opacity:0}
+.avx .sp::before{content:'';position:absolute;inset:0;background:#fff;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%)}
+.avx .sp.s1{top:-6%;left:6%}.avx .sp.s2{top:10%;right:-10%}.avx .sp.s3{bottom:-4%;left:-8%}.avx .sp.s4{bottom:4%;right:0}.avx .sp.s5{top:44%;left:-16%}.avx .sp.s6{top:-12%;right:22%}
+.avx .halo{position:absolute;inset:-14%;border-radius:50%;opacity:.6}
+.avx .rays{position:absolute;inset:-42%;border-radius:50%;background:repeating-conic-gradient(rgba(255,200,40,.6) 0 9deg,transparent 9deg 24deg);-webkit-mask:radial-gradient(circle,#000 28%,transparent 70%);mask:radial-gradient(circle,#000 28%,transparent 70%)}
+.avx .crown{position:absolute;top:calc(var(--s)*-.27);left:50%;transform:translateX(-50%) rotate(-10deg);font-size:calc(var(--s)*.42);filter:drop-shadow(0 2px 2px rgba(150,90,0,.45))}
+.avx .crown .emj{width:1em;height:1em}
+.avx .badge{position:absolute;right:-4%;bottom:-4%;width:calc(var(--s)*.32);height:calc(var(--s)*.32);border-radius:50%;background:linear-gradient(#6AB0FF,#2F6FE0);color:#fff;display:grid;place-items:center;font-size:calc(var(--s)*.19);border:2px solid #fff;box-shadow:0 2px 5px rgba(47,111,224,.45)}
+/* 稀有：蓝色宝石环 */
+.avx.t-rare .ring::before{background:conic-gradient(#1F5FD6,#8EC5FF,#FFFFFF,#4F8DF7,#1F5FD6,#9AD0FF,#E6F3FF,#1F5FD6)}
+.avx.t-rare{filter:drop-shadow(0 0 calc(var(--s)*.06) rgba(79,141,247,.55))}
+/* 史诗：紫粉彩虹流光环 */
+.avx.t-epic .halo{background:radial-gradient(circle,rgba(180,110,255,.8),transparent 68%)}
+.avx.t-epic .ring::before{background:conic-gradient(#7A4DF0,#FF6FD8,#FFE1F6,#5FD3FF,#7A4DF0,#C59BFF,#FF9FE6,#7A4DF0)}
+.avx.t-epic .sp::before{filter:drop-shadow(0 0 3px #D9A6FF)}
+/* 传说：金色光芒 + 流光金环 + 皇冠 */
+.avx.t-leg .halo{background:radial-gradient(circle,rgba(255,196,40,.95),transparent 66%)}
+.avx.t-leg .ring::before{background:conic-gradient(#FFA800,#FFF6C2,#FF8A00,#FFE066,#FFFFFF,#FFB300,#FFD24A,#FFF3B0,#FFA800)}
+.avx.t-leg .sp::before{background:#FFF6C8;filter:drop-shadow(0 0 3px #FFB300)}
+.avx.still .rays,.avx.still .halo,.avx.still .sp{display:none}
+.avsel button{padding:6px 8px}
+.av-tile{position:relative}
+.av-tile .avx{margin:6px 0 2px}
+.av-tile .avx.t-leg{margin-top:20px}
+.confirm .avx.t-leg,.goal>.avx.t-leg{margin-top:22px}
+.av-name small{font-size:11px;color:var(--ink2);font-weight:600}
+.goal>.avx{margin:4px 6px}
+/* 兑换成功 */
+.unlock{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(24,12,48,.82);overflow:hidden;cursor:pointer}
+.unlock .ul-burst{position:absolute;width:1200px;height:1200px;left:50%;top:50%;margin:-600px 0 0 -600px;background:repeating-conic-gradient(var(--bc) 0 7deg,transparent 7deg 20deg);-webkit-mask:radial-gradient(circle,#000 8%,transparent 58%);mask:radial-gradient(circle,#000 8%,transparent 58%);opacity:.65}
+.u-rare{--bc:rgba(120,180,255,.65)} .u-epic{--bc:rgba(220,140,255,.65)} .u-leg{--bc:rgba(255,206,60,.75)}
+.unlock .ul-box{position:relative;text-align:center;color:#fff;padding:20px}
+.ul-t1{font-size:26px;font-weight:900;margin-top:34px;text-shadow:0 2px 8px rgba(0,0,0,.4)}
+.ul-t2{font-size:17px;margin-top:8px;font-weight:700} .ul-t3{font-size:13px;opacity:.75;margin-top:18px}
+.ul-star{position:absolute;left:50%;top:40%;font-size:24px;opacity:0}
+.ul-star .emj{width:1em;height:1em}
+@media (prefers-reduced-motion: no-preference){
+ .avx.t-rare .ring::before{animation:avspin 6s linear infinite}
+ .avx.t-epic .ring::before{animation:avspin 3.2s linear infinite}
+ .avx.t-leg .ring::before{animation:avspin 2.4s linear infinite}
+ .avx.t-leg .rays{animation:avspin 12s linear infinite}
+ .avx.t-rare .face::after{animation:avshine 3.4s ease-in-out infinite}
+ .avx.t-epic .face::after{animation:avshine 2.6s ease-in-out infinite}
+ .avx.t-leg .face::after{animation:avshine 2s ease-in-out infinite}
+ .avx .halo{animation:avpulse 2.2s ease-in-out infinite}
+ .avx .sp{animation:avtw 1.8s ease-in-out infinite}
+ .avx .sp.s2{animation-delay:.3s}.avx .sp.s3{animation-delay:.6s}.avx .sp.s4{animation-delay:.9s}.avx .sp.s5{animation-delay:1.2s}.avx .sp.s6{animation-delay:1.5s}
+ .avx.t-leg .crown{animation:avbob 2.4s ease-in-out infinite}
+ .avx.slow .ring::before,.avx.slow .rays{animation-duration:9s}
+ .avx.slow .face::after{animation-duration:5s}
+ .avx.slow .sp{animation-duration:3.2s}
+ .avx.still .ring::before,.avx.still .face::after,.avx.still .crown{animation:none}
+ .unlock .ul-burst{animation:avspin 14s linear infinite}
+ .ul-pop{animation:ulpop .8s cubic-bezier(.2,1.6,.4,1) both}
+ .ul-t1{animation:ulup .5s .45s both} .ul-t2{animation:ulup .5s .6s both} .ul-t3{animation:ulup .5s 1s both}
+ .ul-star{animation:ulfly 1.3s ease-out both}
+}
+@media (prefers-reduced-motion: reduce){ .ul-star{display:none} }
+@keyframes avspin{to{transform:rotate(360deg)}}
+@keyframes avshine{0%,55%{left:-70%}100%{left:140%}}
+@keyframes avpulse{50%{opacity:1;transform:scale(1.07)}}
+@keyframes avtw{0%,100%{opacity:0;transform:scale(.3) rotate(0)}50%{opacity:1;transform:scale(1) rotate(45deg)}}
+@keyframes avbob{50%{transform:translateX(-50%) rotate(-10deg) translateY(-3px)}}
+@keyframes ulpop{0%{transform:scale(.1) rotate(-40deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes ulup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes ulfly{0%{transform:translate(0,0) scale(.4);opacity:1}100%{transform:translate(var(--x),var(--y)) scale(1.1);opacity:0}}
+/* 称号牌更亮眼 */
+.tt-epic{background:linear-gradient(90deg,#8C6CF2,#E36BD0)!important;color:#fff!important}
+.tt-leg{background:linear-gradient(90deg,#FFB300,#FFE066,#FFB300)!important;color:#7A4A00!important;box-shadow:0 0 8px rgba(255,190,40,.7)}
+@media (max-width:620px){ .av-grid .avx{--s:58px!important} }
 </style>
 
 <div id="app"><div id="fx"></div><div id="view"></div></div>
 
 <script src="icons.js"></script>
+<script src="avatars.js"></script>
 <script>
 /* ========== 基础数据 ========== */
 const DEFAULT_LIST = `apple 苹果
@@ -533,10 +616,10 @@ const EMOJI_RAW = "apple:🍎|banana:🍌|orange:🍊|pear:🍐|grape:🍇|grape
 const EMOJI = {};
 EMOJI_RAW.split('|').forEach(p => { const i = p.indexOf(':'); if (i > 0) EMOJI[p.slice(0, i).trim()] = p.slice(i + 1).trim(); });
 // 更多常用词（老的对照表优先）
-const EMOJI_RAW2 = "dumpling:🥟|dumplings:🥟|chips:🍟|french fries:🍟|fries:🍟|popcorn:🍿|chocolate:🍫|honey:🍯|butter:🧈|cheese:🧀|meat:🍖|mutton:🍖|beef:🥩|pork:🥓|sausage:🌭|hot dog:🌭|doughnut:🍩|donut:🍩|pie:🥧|cupcake:🧁|lollipop:🍭|candy:🍬|sweets:🍬|coconut:🥥|kiwi:🥝|avocado:🥑|eggplant:🍆|cucumber:🥒|onion:🧅|garlic:🧄|green pepper:🫑|pepper:🫑|broccoli:🥦|mushroom:🍄|peanut:🥜|nuts:🥜|chestnut:🌰|melon:🍈|blueberry:🫐|cola:🥤|coke:🥤|drink:🥤|soda:🥤|bowl:🥣|plate:🍽️|spoon:🥄|meal:🍽️|food:🍲|vegetable:🥦|vegetables:🥦|salt:🧂|bread:🍞|toast:🍞|pancake:🥞|salad:🥗|pizza:🍕|hamburger:🍔|burger:🍔|cookie:🍪|biscuit:🍪|lemon:🍋|peach:🍑|pear:🍐|cherry:🍒|mango:🥭|pineapple:🍍|corn:🌽|carrot:🥕|tea:🍵|coffee:☕|juice:🧃|milk:🥛|owl:🦉|penguin:🐧|koala:🐨|deer:🦌|squirrel:🐿️|camel:🐫|hippo:🦛|rhino:🦏|crocodile:🐊|shark:🦈|octopus:🐙|crab:🦀|snail:🐌|spider:🕷️|ladybug:🐞|parrot:🦜|eagle:🦅|swan:🦢|chick:🐤|puppy:🐶|kitten:🐱|bat:🦇|wolf:🐺|ox:🐂|dragon:🐉|unicorn:🦄|dinosaur:🦖|goose:🪿|bug:🐛|insect:🐛|worm:🪱|animal:🐾|pet:🐾|ant:🐜|butterfly:🦋|dolphin:🐬|whale:🐳|turtle:🐢|frog:🐸|lion:🦁|tiger:🐯|elephant:🐘|monkey:🐒|giraffe:🦒|zebra:🦓|kangaroo:🦘|fox:🦊|bear:🐻|cow:🐄|pig:🐷|sheep:🐑|goat:🐐|chicken:🐔|hen:🐔|duck:🦆|horse:🐴|rabbit:🐰|mouse:🐭|bird:🐦|snake:🐍|tongue:👅|finger:☝️|knee:🦵|toe:🦶|brain:🧠|heart:❤️|leg:🦵|foot:🦶|feet:🦶|arm:💪|hand:✋|eye:👁️|ear:👂|nose:👃|mouth:👄|tooth:🦷|teeth:🦷|hair:💇|face:🙂|shorts:🩳|boots:🥾|shoe:👟|shoes:👟|sneakers:👟|clothes:👕|ring:💍|crown:👑|glasses:👓|scarf:🧣|gloves:🧤|coat:🧥|jacket:🧥|dress:👗|skirt:👗|jeans:👖|trousers:👖|pants:👖|cap:🧢|notebook:📓|dictionary:📕|map:🗺️|paper:📄|letter:✉️|picture:🖼️|photo:📷|camera:📷|scissors:✂️|homework:📝|test:📝|exam:📝|art:🎨|science:🔬|maths:🔢|math:🔢|ruler:📏|pen:🖊️|crayon:🖍️|schoolbag:🎒|backpack:🎒|playground:🛝|gym:🏋️|window:🪟|door:🚪|hotel:🏨|bank:🏦|post office:🏤|restaurant:🍽️|museum:🏛️|church:⛪|theatre:🎭|theater:🎭|garden:🌷|street:🛣️|road:🛣️|bridge:🌉|city:🏙️|village:🏘️|beach:🏖️|island:🏝️|desert:🏜️|forest:🌲|hill:⛰️|mountain:⛰️|world:🌍|earth:🌍|station:🚉|airport:✈️|market:🏪|toilet:🚽|living room:🛋️|sofa:🛋️|building:🏢|office:🏢|factory:🏭|tent:⛺|castle:🏰|river:🏞️|lake:🏞️|sea:🌊|ocean:🌊|motorbike:🏍️|motorcycle:🏍️|truck:🚚|ambulance:🚑|fire engine:🚒|police car:🚓|helicopter:🚁|rocket:🚀|tractor:🚜|scooter:🛴|skateboard:🛹|metro:🚇|subway:🚇|ship:🚢|boat:⛵|train:🚆|taxi:🚕|bike:🚲|bicycle:🚲|rainbow:🌈|wind:🌬️|windy:🌬️|storm:⛈️|thunder:⛈️|fog:🌫️|foggy:🌫️|ice:🧊|fire:🔥|leaf:🍃|leaves:🍂|plant:🪴|seed:🌱|rose:🌹|sunflower:🌻|tulip:🌷|flower:🌸|tree:🌳|grass:🌱|cactus:🌵|volcano:🌋|weather:🌤️|warm:🌤️|wave:🌊|stone:🪨|rock:🪨|planet:🪐|snow:❄️|snowy:❄️|rain:🌧️|rainy:🌧️|cloud:☁️|cloudy:☁️|sunny:☀️|time:⏰|calendar:📅|night:🌙|morning:🌅|evening:🌆|week:📅|month:📅|party:🎉|holiday:🏖️|christmas:🎄|new year:🎆|gift:🎁|present:🎁|son:👦|daughter:👧|aunt:👩|uncle:👨|grandmother:👵|grandma:👵|grandfather:👴|grandpa:👴|man:👨|woman:👩|child:🧒|children:🧒|kid:🧒|people:👥|king:🤴|queen:👸|prince:🤴|princess:👸|pilot:🧑‍✈️|worker:👷|scientist:🧑‍🔬|artist:🧑‍🎨|singer:🧑‍🎤|dancer:💃|writer:✍️|firefighter:🧑‍🚒|chef:🧑‍🍳|policeman:👮|police officer:👮|scared:😨|afraid:😨|surprised:😮|excited:🤩|sleepy:😴|sick:🤒|ill:🤒|bored:😑|worried:😟|funny:😂|cute:🥰|strong:💪|new:🆕|fast:⚡|slow:🐢|good:👍|bad:👎|yes:✅|no:❌|wrong:❌|correct:✅|cool:😎|sleep:😴|walk:🚶|climb:🧗|listen:👂|listen to music:🎧|talk:💬|speak:🗣️|paint:🎨|study:📚|learn:📚|think:🤔|laugh:😂|cry:😢|smile:😊|hug:🤗|skate:⛸️|ski:⛷️|skiing:⛷️|go fishing:🎣|fishing:🎣|camping:🏕️|go camping:🏕️|hiking:🥾|go hiking:🥾|shopping:🛍️|go shopping:🛍️|ride a horse:🏇|row a boat:🚣|take pictures:📷|plant trees:🌳|make a snowman:☃️|snowman:☃️|picnic:🧺|have a picnic:🧺|telephone:☎️|email:📧|game:🎮|play games:🎮|toy:🧸|puzzle:🧩|robot:🤖|volleyball:🏐|baseball:⚾|table tennis:🏓|ping-pong:🏓|chess:♟️|drum:🥁|trumpet:🎺|guitar:🎸|piano:🎹|violin:🎻|sport:🏅|sports:🏅|medal:🏅|winner:🏆|trophy:🏆|circle:⭕|square:🟥|triangle:🔺|money:💰|box:📦|bell:🔔|candle:🕯️|flag:🚩|ticket:🎫|newspaper:📰|radio:📻|video:📹|movie:🎬|film:🎬|story:📖|song:🎵|ok:👌|thanks:🙏|thank you:🙏|sorry:🙇|welcome:👋|stop:🛑|traffic lights:🚦|bin:🗑️|rubbish:🗑️|mirror:🪞|bath:🛁|shower:🚿|soap:🧼|toothbrush:🪥|toothpaste:🪥|brush teeth:🪥|wash:🧼|sweep:🧹|broom:🧹";
+const EMOJI_RAW2 = "o'clock:🕐|bedtime:🛏️|recorder:📼|exercise:🏃|exercise book:📓|exercise books:📓|dumpling:🥟|dumplings:🥟|chips:🍟|french fries:🍟|fries:🍟|popcorn:🍿|chocolate:🍫|honey:🍯|butter:🧈|cheese:🧀|meat:🍖|mutton:🍖|beef:🥩|pork:🥓|sausage:🌭|hot dog:🌭|doughnut:🍩|donut:🍩|pie:🥧|cupcake:🧁|lollipop:🍭|candy:🍬|sweets:🍬|coconut:🥥|kiwi:🥝|avocado:🥑|eggplant:🍆|cucumber:🥒|onion:🧅|garlic:🧄|green pepper:🫑|pepper:🫑|broccoli:🥦|mushroom:🍄|peanut:🥜|nuts:🥜|chestnut:🌰|melon:🍈|blueberry:🫐|cola:🥤|coke:🥤|drink:🥤|soda:🥤|bowl:🥣|plate:🍽️|spoon:🥄|meal:🍽️|food:🍲|vegetable:🥦|vegetables:🥦|salt:🧂|bread:🍞|toast:🍞|pancake:🥞|salad:🥗|pizza:🍕|hamburger:🍔|burger:🍔|cookie:🍪|biscuit:🍪|lemon:🍋|peach:🍑|pear:🍐|cherry:🍒|mango:🥭|pineapple:🍍|corn:🌽|carrot:🥕|tea:🍵|coffee:☕|juice:🧃|milk:🥛|owl:🦉|penguin:🐧|koala:🐨|deer:🦌|squirrel:🐿️|camel:🐫|hippo:🦛|rhino:🦏|crocodile:🐊|shark:🦈|octopus:🐙|crab:🦀|snail:🐌|spider:🕷️|ladybug:🐞|parrot:🦜|eagle:🦅|swan:🦢|chick:🐤|puppy:🐶|kitten:🐱|bat:🦇|wolf:🐺|ox:🐂|dragon:🐉|unicorn:🦄|dinosaur:🦖|goose:🪿|bug:🐛|insect:🐛|worm:🪱|animal:🐾|pet:🐾|ant:🐜|butterfly:🦋|dolphin:🐬|whale:🐳|turtle:🐢|frog:🐸|lion:🦁|tiger:🐯|elephant:🐘|monkey:🐒|giraffe:🦒|zebra:🦓|kangaroo:🦘|fox:🦊|bear:🐻|cow:🐄|pig:🐷|sheep:🐑|goat:🐐|chicken:🐔|hen:🐔|duck:🦆|horse:🐴|rabbit:🐰|mouse:🐭|bird:🐦|snake:🐍|tongue:👅|finger:☝️|knee:🦵|toe:🦶|brain:🧠|heart:❤️|leg:🦵|foot:🦶|feet:🦶|arm:💪|hand:✋|eye:👁️|ear:👂|nose:👃|mouth:👄|tooth:🦷|teeth:🦷|hair:💇|face:🙂|shorts:🩳|boots:🥾|shoe:👟|shoes:👟|sneakers:👟|clothes:👕|ring:💍|crown:👑|glasses:👓|scarf:🧣|gloves:🧤|coat:🧥|jacket:🧥|dress:👗|skirt:👗|jeans:👖|trousers:👖|pants:👖|cap:🧢|notebook:📓|dictionary:📕|map:🗺️|paper:📄|letter:✉️|picture:🖼️|photo:📷|camera:📷|scissors:✂️|homework:📝|test:📝|exam:📝|art:🎨|science:🔬|maths:🔢|math:🔢|ruler:📏|pen:🖊️|crayon:🖍️|schoolbag:🎒|backpack:🎒|playground:🛝|gym:🏋️|window:🪟|door:🚪|hotel:🏨|bank:🏦|post office:🏤|restaurant:🍽️|museum:🏛️|church:⛪|theatre:🎭|theater:🎭|garden:🌷|street:🛣️|road:🛣️|bridge:🌉|city:🏙️|village:🏘️|beach:🏖️|island:🏝️|desert:🏜️|forest:🌲|hill:⛰️|mountain:⛰️|world:🌍|earth:🌍|station:🚉|airport:✈️|market:🏪|toilet:🚽|living room:🛋️|sofa:🛋️|building:🏢|office:🏢|factory:🏭|tent:⛺|castle:🏰|river:🏞️|lake:🏞️|sea:🌊|ocean:🌊|motorbike:🏍️|motorcycle:🏍️|truck:🚚|ambulance:🚑|fire engine:🚒|police car:🚓|helicopter:🚁|rocket:🚀|tractor:🚜|scooter:🛴|skateboard:🛹|metro:🚇|subway:🚇|ship:🚢|boat:⛵|train:🚆|taxi:🚕|bike:🚲|bicycle:🚲|rainbow:🌈|wind:🌬️|windy:🌬️|storm:⛈️|thunder:⛈️|fog:🌫️|foggy:🌫️|ice:🧊|fire:🔥|leaf:🍃|leaves:🍂|plant:🪴|seed:🌱|rose:🌹|sunflower:🌻|tulip:🌷|flower:🌸|tree:🌳|grass:🌱|cactus:🌵|volcano:🌋|weather:🌤️|warm:🌤️|wave:🌊|stone:🪨|rock:🪨|planet:🪐|snow:❄️|snowy:❄️|rain:🌧️|rainy:🌧️|cloud:☁️|cloudy:☁️|sunny:☀️|time:⏰|calendar:📅|night:🌙|morning:🌅|evening:🌆|week:📅|month:📅|party:🎉|holiday:🏖️|christmas:🎄|new year:🎆|gift:🎁|present:🎁|son:👦|daughter:👧|aunt:👩|uncle:👨|grandmother:👵|grandma:👵|grandfather:👴|grandpa:👴|man:👨|woman:👩|child:🧒|children:🧒|kid:🧒|people:👥|king:🤴|queen:👸|prince:🤴|princess:👸|pilot:🧑‍✈️|worker:👷|scientist:🧑‍🔬|artist:🧑‍🎨|singer:🧑‍🎤|dancer:💃|writer:✍️|firefighter:🧑‍🚒|chef:🧑‍🍳|policeman:👮|police officer:👮|scared:😨|afraid:😨|surprised:😮|excited:🤩|sleepy:😴|sick:🤒|ill:🤒|bored:😑|worried:😟|funny:😂|cute:🥰|strong:💪|new:🆕|fast:⚡|slow:🐢|good:👍|bad:👎|yes:✅|no:❌|wrong:❌|correct:✅|cool:😎|sleep:😴|walk:🚶|climb:🧗|listen:👂|listen to music:🎧|talk:💬|speak:🗣️|paint:🎨|study:📚|learn:📚|think:🤔|laugh:😂|cry:😢|smile:😊|hug:🤗|skate:⛸️|ski:⛷️|skiing:⛷️|go fishing:🎣|fishing:🎣|camping:🏕️|go camping:🏕️|hiking:🥾|go hiking:🥾|shopping:🛍️|go shopping:🛍️|ride a horse:🏇|row a boat:🚣|take pictures:📷|plant trees:🌳|make a snowman:☃️|snowman:☃️|picnic:🧺|have a picnic:🧺|telephone:☎️|email:📧|game:🎮|play games:🎮|toy:🧸|puzzle:🧩|robot:🤖|volleyball:🏐|baseball:⚾|table tennis:🏓|ping-pong:🏓|chess:♟️|drum:🥁|trumpet:🎺|guitar:🎸|piano:🎹|violin:🎻|sport:🏅|sports:🏅|medal:🏅|winner:🏆|trophy:🏆|circle:⭕|square:🟥|triangle:🔺|money:💰|box:📦|bell:🔔|candle:🕯️|flag:🚩|ticket:🎫|newspaper:📰|radio:📻|video:📹|movie:🎬|film:🎬|story:📖|song:🎵|ok:👌|thanks:🙏|thank you:🙏|sorry:🙇|welcome:👋|stop:🛑|traffic lights:🚦|bin:🗑️|rubbish:🗑️|mirror:🪞|bath:🛁|shower:🚿|soap:🧼|toothbrush:🪥|toothpaste:🪥|brush teeth:🪥|wash:🧼|sweep:🧹|broom:🧹";
 EMOJI_RAW2.split('|').forEach(p => { const i = p.indexOf(':'); if (i > 0) { const k = p.slice(0, i).trim(); if (!EMOJI[k]) EMOJI[k] = p.slice(i + 1).trim(); } });
 // 按中文意思配图
-const ZH_RAW = "正确:✅|对:✅|错误:❌|错:❌|右边:➡️|向右:➡️|右:➡️|左边:⬅️|向左:⬅️|左:⬅️|上面:⬆️|下面:⬇️|苹果:🍎|香蕉:🍌|橙子:🍊|橘子:🍊|梨:🍐|桃子:🍑|葡萄:🍇|西瓜:🍉|草莓:🍓|樱桃:🍒|柠檬:🍋|芒果:🥭|菠萝:🍍|椰子:🥥|猕猴桃:🥝|蓝莓:🫐|哈密瓜:🍈|甜瓜:🍈|西红柿:🍅|番茄:🍅|土豆:🥔|马铃薯:🥔|胡萝卜:🥕|玉米:🌽|黄瓜:🥒|茄子:🍆|洋葱:🧅|大蒜:🧄|青椒:🫑|西兰花:🥦|蘑菇:🍄|花生:🥜|坚果:🥜|蔬菜:🥦|水果:🍎|面包:🍞|米饭:🍚|大米:🍚|面条:🍜|饺子:🥟|包子:🥟|汉堡包:🍔|汉堡:🍔|三明治:🥪|比萨饼:🍕|披萨:🍕|热狗:🌭|香肠:🌭|薯条:🍟|爆米花:🍿|巧克力:🍫|糖果:🍬|棒棒糖:🍭|蜂蜜:🍯|黄油:🧈|奶酪:🧀|鸡蛋:🥚|蛋:🥚|肉:🍖|牛肉:🥩|牛排:🥩|猪肉:🥓|羊肉:🍖|鱼:🐟|鸡肉:🍗|汤:🍲|沙拉:🥗|蛋糕:🍰|甜点:🍰|饼干:🍪|曲奇:🍪|甜甜圈:🍩|馅饼:🥧|冰淇淋:🍦|冰激凌:🍦|盐:🧂|食物:🍲|早餐:🥣|早饭:🥣|午餐:🍱|午饭:🍱|晚餐:🍽️|晚饭:🍽️|牛奶:🥛|水:💧|茶:🍵|咖啡:☕|果汁:🧃|可乐:🥤|饮料:🥤|碗:🥣|盘子:🍽️|勺子:🥄|叉子:🍴|刀:🔪|筷子:🥢|猫:🐱|狗:🐶|熊猫:🐼|老虎:🐯|狮子:🦁|大象:🐘|猴子:🐒|长颈鹿:🦒|斑马:🦓|袋鼠:🦘|狐狸:🦊|熊:🐻|牛:🐄|奶牛:🐄|猪:🐷|羊:🐑|绵羊:🐑|山羊:🐐|鸡:🐔|母鸡:🐔|小鸡:🐤|鸭子:🦆|鸭:🦆|鹅:🪿|马:🐴|兔子:🐰|老鼠:🐭|鸟:🐦|蛇:🐍|蚂蚁:🐜|蝴蝶:🦋|蜜蜂:🐝|海豚:🐬|鲸:🐳|乌龟:🐢|青蛙:🐸|猫头鹰:🦉|企鹅:🐧|考拉:🐨|鹿:🦌|松鼠:🐿️|骆驼:🐫|河马:🦛|犀牛:🦏|鳄鱼:🐊|鲨鱼:🦈|章鱼:🐙|螃蟹:🦀|蜗牛:🐌|蜘蛛:🕷️|瓢虫:🐞|鹦鹉:🦜|鹰:🦅|天鹅:🦢|蝙蝠:🦇|狼:🐺|龙:🐉|恐龙:🦖|虫子:🐛|动物:🐾|宠物:🐾|头:🙂|脸:🙂|眼睛:👁️|耳朵:👂|鼻子:👃|嘴:👄|嘴巴:👄|牙齿:🦷|舌头:👅|头发:💇|手:✋|手指:☝️|胳膊:💪|手臂:💪|腿:🦵|脚:🦶|膝盖:🦵|心:❤️|大脑:🧠|衣服:👕|T恤衫:👕|T恤:👕|衬衫:👔|外套:🧥|夹克衫:🧥|夹克:🧥|毛衣:🧥|连衣裙:👗|裙子:👗|裤子:👖|牛仔裤:👖|短裤:🩳|袜子:🧦|鞋:👟|鞋子:👟|运动鞋:👟|靴子:🥾|帽子:👒|鸭舌帽:🧢|围巾:🧣|手套:🧤|眼镜:👓|戒指:💍|王冠:👑|雨伞:☂️|伞:☂️|包:👜|书包:🎒|书:📖|铅笔:✏️|钢笔:🖊️|笔:🖊️|尺子:📏|蜡笔:🖍️|笔记本:📓|本子:📓|字典:📕|词典:📕|地图:🗺️|纸:📄|信:✉️|图画:🖼️|画:🖼️|照片:📷|相机:📷|照相机:📷|剪刀:✂️|作业:📝|家庭作业:📝|考试:📝|测试:📝|美术:🎨|科学:🔬|数学:🔢|音乐:🎵|电脑:💻|计算机:💻|老师:🧑‍🏫|教师:🧑‍🏫|学生:🧑‍🎓|学校:🏫|教室:🏫|图书馆:📚|操场:🛝|书架:📚|家:🏠|房子:🏠|房间:🚪|门:🚪|窗户:🪟|卧室:🛏️|床:🛏️|厨房:🍳|浴室:🛁|卫生间:🚽|厕所:🚽|客厅:🛋️|沙发:🛋️|椅子:🪑|桌子:🪑|灯:💡|电视:📺|电话:☎️|手机:📱|钟:⏰|时钟:⏰|闹钟:⏰|镜子:🪞|牙刷:🪥|牙膏:🪥|肥皂:🧼|扫帚:🧹|垃圾桶:🗑️|垃圾:🗑️|钥匙:🔑|盒子:📦|箱子:📦|礼物:🎁|钱:💰|蜡烛:🕯️|铃:🔔|旗:🚩|票:🎫|报纸:📰|收音机:📻|电影:🎬|故事:📖|歌:🎵|歌曲:🎵|公园:🌳|动物园:🦁|农场:🚜|医院:🏥|超市:🏪|商店:🏪|市场:🏪|银行:🏦|邮局:🏤|饭店:🍽️|餐馆:🍽️|餐厅:🍽️|宾馆:🏨|酒店:🏨|博物馆:🏛️|教堂:⛪|电影院:🎦|剧院:🎭|花园:🌷|街道:🛣️|路:🛣️|马路:🛣️|桥:🌉|城市:🏙️|村庄:🏘️|海滩:🏖️|沙滩:🏖️|岛:🏝️|沙漠:🏜️|森林:🌲|山:⛰️|小山:⛰️|河:🏞️|湖:🏞️|海:🌊|大海:🌊|海洋:🌊|世界:🌍|地球:🌍|车站:🚉|机场:✈️|大楼:🏢|办公室:🏢|工厂:🏭|帐篷:⛺|城堡:🏰|汽车:🚗|小汽车:🚗|公共汽车:🚌|公交车:🚌|校车:🚌|出租车:🚕|自行车:🚲|火车:🚆|飞机:✈️|船:⛵|轮船:🚢|小船:⛵|地铁:🚇|摩托车:🏍️|卡车:🚚|救护车:🚑|消防车:🚒|警车:🚓|直升机:🚁|火箭:🚀|拖拉机:🚜|滑板车:🛴|滑板:🛹|太阳:☀️|月亮:🌙|星星:⭐|星:⭐|云:☁️|雨:🌧️|雪:❄️|风:🌬️|彩虹:🌈|暴风雨:⛈️|雷:⛈️|雾:🌫️|冰:🧊|火:🔥|树:🌳|树叶:🍃|叶子:🍃|花:🌸|草:🌱|植物:🪴|种子:🌱|玫瑰:🌹|向日葵:🌻|郁金香:🌷|仙人掌:🌵|火山:🌋|天气:🌤️|石头:🪨|行星:🪐|晴朗的:☀️|晴天:☀️|多云的:☁️|下雨的:🌧️|下雪的:❄️|有风的:🌬️|热的:🔥|冷的:🥶|暖和的:🌤️|温暖的:🌤️|时间:⏰|日历:📅|早上:🌅|早晨:🌅|晚上:🌆|夜晚:🌙|生日:🎂|聚会:🎉|派对:🎉|假期:🏖️|圣诞节:🎄|新年:🎆|家庭:🏠|家人:🏠|爸爸:👨|父亲:👨|妈妈:👩|母亲:👩|儿子:👦|女儿:👧|哥哥:👦|弟弟:👦|姐姐:👧|妹妹:👧|男孩:👦|女孩:👧|阿姨:👩|叔叔:👨|奶奶:👵|外婆:👵|祖母:👵|爷爷:👴|外公:👴|祖父:👴|婴儿:👶|宝宝:👶|男人:👨|女人:👩|孩子:🧒|儿童:🧒|人们:👥|国王:🤴|王后:👸|王子:🤴|公主:👸|医生:🧑‍⚕️|护士:🧑‍⚕️|警察:👮|农民:🧑‍🌾|厨师:🧑‍🍳|司机:🚗|飞行员:🧑‍✈️|工人:👷|科学家:🧑‍🔬|画家:🧑‍🎨|艺术家:🧑‍🎨|歌手:🧑‍🎤|舞蹈家:💃|作家:✍️|消防员:🧑‍🚒|朋友:🤝|高兴的:😊|开心的:😊|快乐的:😊|难过的:😢|伤心的:😢|生气的:😠|累的:😫|疲倦的:😫|饿的:😋|饥饿的:😋|害怕的:😨|惊讶的:😮|兴奋的:🤩|困的:😴|生病的:🤒|无聊的:😑|担心的:😟|有趣的:😂|可爱的:🥰|强壮的:💪|大的:🐘|小的:🐭|快的:⚡|慢的:🐢|好的:👍|坏的:👎|干净的:🧼|新的:🆕|睡觉:😴|走路:🚶|散步:🚶|跑:🏃|跑步:🏃|跳:🤸|游泳:🏊|爬山:🧗|攀爬:🧗|听:👂|听音乐:🎧|说话:💬|唱歌:🎤|跳舞:💃|画画:🎨|读书:📖|看书:📖|写:✍️|写作业:📝|做作业:📝|学习:📚|想:🤔|笑:😂|哭:😢|微笑:😊|拥抱:🤗|滑冰:⛸️|滑雪:⛷️|钓鱼:🎣|去钓鱼:🎣|野营:🏕️|去野营:🏕️|远足:🥾|徒步:🥾|购物:🛍️|去购物:🛍️|骑马:🏇|划船:🚣|拍照:📷|拍照片:📷|植树:🌳|种树:🌳|堆雪人:☃️|雪人:☃️|野餐:🧺|做饭:🍳|洗:🧼|洗澡:🛁|淋浴:🚿|刷牙:🪥|打扫:🧹|扫地:🧹|看电视:📺|放风筝:🪁|风筝:🪁|起床:⏰|上学:🏫|游戏:🎮|玩游戏:🎮|玩具:🧸|拼图:🧩|机器人:🤖|球:⚽|足球:⚽|踢足球:⚽|篮球:🏀|打篮球:🏀|排球:🏐|棒球:⚾|乒乓球:🏓|打乒乓球:🏓|网球:🎾|国际象棋:♟️|下棋:♟️|鼓:🥁|小号:🎺|吉他:🎸|钢琴:🎹|弹钢琴:🎹|小提琴:🎻|运动:🏅|奖牌:🏅|奖杯:🏆|红色:🔴|红色的:🔴|黄色:🟡|黄色的:🟡|蓝色:🔵|蓝色的:🔵|绿色:🟢|绿色的:🟢|紫色:🟣|紫色的:🟣|橙色:🟠|橙色的:🟠|黑色:⚫|黑色的:⚫|白色:⚪|白色的:⚪|棕色:🟤|棕色的:🟤|粉色:🌸|粉红色:🌸|圆:⭕|圆形:⭕|正方形:🟥|三角形:🔺|你好:👋|再见:👋|谢谢:🙏|对不起:🙇|欢迎:👋|停:🛑|红绿灯:🚦|交通灯:🚦";
+const ZH_RAW = "正确:✅|对:✅|错误:❌|错:❌|右边:➡️|向右:➡️|右:➡️|左边:⬅️|向左:⬅️|左:⬅️|上面:⬆️|下面:⬇️|苹果:🍎|香蕉:🍌|橙子:🍊|橘子:🍊|梨:🍐|桃子:🍑|葡萄:🍇|西瓜:🍉|草莓:🍓|樱桃:🍒|柠檬:🍋|芒果:🥭|菠萝:🍍|椰子:🥥|猕猴桃:🥝|蓝莓:🫐|哈密瓜:🍈|甜瓜:🍈|西红柿:🍅|番茄:🍅|土豆:🥔|马铃薯:🥔|胡萝卜:🥕|玉米:🌽|黄瓜:🥒|茄子:🍆|洋葱:🧅|大蒜:🧄|青椒:🫑|西兰花:🥦|蘑菇:🍄|花生:🥜|坚果:🥜|蔬菜:🥦|水果:🍎|面包:🍞|米饭:🍚|大米:🍚|面条:🍜|饺子:🥟|包子:🥟|汉堡包:🍔|汉堡:🍔|三明治:🥪|比萨饼:🍕|披萨:🍕|热狗:🌭|香肠:🌭|薯条:🍟|爆米花:🍿|巧克力:🍫|糖果:🍬|棒棒糖:🍭|蜂蜜:🍯|黄油:🧈|奶酪:🧀|鸡蛋:🥚|蛋:🥚|肉:🍖|牛肉:🥩|牛排:🥩|猪肉:🥓|羊肉:🍖|鱼:🐟|鸡肉:🍗|汤:🍲|沙拉:🥗|蛋糕:🍰|甜点:🍰|饼干:🍪|曲奇:🍪|甜甜圈:🍩|馅饼:🥧|冰淇淋:🍦|冰激凌:🍦|盐:🧂|食物:🍲|早餐:🥣|早饭:🥣|午餐:🍱|午饭:🍱|晚餐:🍽️|晚饭:🍽️|牛奶:🥛|水:💧|茶:🍵|咖啡:☕|果汁:🧃|可乐:🥤|饮料:🥤|碗:🥣|盘子:🍽️|勺子:🥄|叉子:🍴|刀:🔪|筷子:🥢|猫:🐱|狗:🐶|熊猫:🐼|老虎:🐯|狮子:🦁|大象:🐘|猴子:🐒|长颈鹿:🦒|斑马:🦓|袋鼠:🦘|狐狸:🦊|熊:🐻|牛:🐄|奶牛:🐄|猪:🐷|羊:🐑|绵羊:🐑|山羊:🐐|鸡:🐔|母鸡:🐔|小鸡:🐤|鸭子:🦆|鸭:🦆|鹅:🪿|马:🐴|兔子:🐰|老鼠:🐭|鸟:🐦|蛇:🐍|蚂蚁:🐜|蝴蝶:🦋|蜜蜂:🐝|海豚:🐬|鲸:🐳|乌龟:🐢|青蛙:🐸|猫头鹰:🦉|企鹅:🐧|考拉:🐨|鹿:🦌|松鼠:🐿️|骆驼:🐫|河马:🦛|犀牛:🦏|鳄鱼:🐊|鲨鱼:🦈|章鱼:🐙|螃蟹:🦀|蜗牛:🐌|蜘蛛:🕷️|瓢虫:🐞|鹦鹉:🦜|鹰:🦅|天鹅:🦢|蝙蝠:🦇|狼:🐺|龙:🐉|恐龙:🦖|虫子:🐛|动物:🐾|宠物:🐾|头:🙂|脸:🙂|眼睛:👁️|耳朵:👂|鼻子:👃|嘴:👄|嘴巴:👄|牙齿:🦷|舌头:👅|头发:💇|手:✋|手指:☝️|胳膊:💪|手臂:💪|腿:🦵|脚:🦶|膝盖:🦵|心:❤️|大脑:🧠|衣服:👕|T恤衫:👕|T恤:👕|衬衫:👔|外套:🧥|夹克衫:🧥|夹克:🧥|毛衣:🧥|连衣裙:👗|裙子:👗|裤子:👖|牛仔裤:👖|短裤:🩳|袜子:🧦|鞋:👟|鞋子:👟|运动鞋:👟|靴子:🥾|帽子:👒|鸭舌帽:🧢|围巾:🧣|手套:🧤|眼镜:👓|戒指:💍|王冠:👑|雨伞:☂️|伞:☂️|包:👜|书包:🎒|书:📖|铅笔:✏️|钢笔:🖊️|笔:🖊️|尺子:📏|蜡笔:🖍️|笔记本:📓|本子:📓|字典:📕|词典:📕|地图:🗺️|纸:📄|信:✉️|图画:🖼️|画:🖼️|照片:📷|相机:📷|照相机:📷|剪刀:✂️|作业:📝|家庭作业:📝|考试:📝|测试:📝|美术:🎨|科学:🔬|数学:🔢|音乐:🎵|电脑:💻|计算机:💻|老师:🧑‍🏫|教师:🧑‍🏫|学生:🧑‍🎓|学校:🏫|教室:🏫|图书馆:📚|操场:🛝|书架:📚|家:🏠|房子:🏠|房间:🚪|门:🚪|窗户:🪟|卧室:🛏️|床:🛏️|厨房:🍳|浴室:🛁|卫生间:🚽|厕所:🚽|客厅:🛋️|沙发:🛋️|椅子:🪑|桌子:🪑|灯:💡|电视:📺|电话:☎️|手机:📱|钟:⏰|时钟:⏰|闹钟:⏰|镜子:🪞|牙刷:🪥|牙膏:🪥|肥皂:🧼|扫帚:🧹|垃圾桶:🗑️|垃圾:🗑️|钥匙:🔑|盒子:📦|箱子:📦|礼物:🎁|钱:💰|蜡烛:🕯️|铃:🔔|旗:🚩|票:🎫|报纸:📰|收音机:📻|电影:🎬|故事:📖|歌:🎵|歌曲:🎵|公园:🌳|动物园:🦁|农场:🚜|医院:🏥|超市:🏪|商店:🏪|市场:🏪|银行:🏦|邮局:🏤|饭店:🍽️|餐馆:🍽️|餐厅:🍽️|宾馆:🏨|酒店:🏨|博物馆:🏛️|教堂:⛪|电影院:🎦|剧院:🎭|花园:🌷|街道:🛣️|路:🛣️|马路:🛣️|桥:🌉|城市:🏙️|村庄:🏘️|海滩:🏖️|沙滩:🏖️|岛:🏝️|沙漠:🏜️|森林:🌲|山:⛰️|小山:⛰️|河:🏞️|湖:🏞️|海:🌊|大海:🌊|海洋:🌊|世界:🌍|地球:🌍|车站:🚉|机场:✈️|大楼:🏢|办公室:🏢|工厂:🏭|帐篷:⛺|城堡:🏰|汽车:🚗|小汽车:🚗|公共汽车:🚌|公交车:🚌|校车:🚌|出租车:🚕|自行车:🚲|火车:🚆|飞机:✈️|船:⛵|轮船:🚢|小船:⛵|地铁:🚇|摩托车:🏍️|卡车:🚚|救护车:🚑|消防车:🚒|警车:🚓|直升机:🚁|火箭:🚀|拖拉机:🚜|滑板车:🛴|滑板:🛹|太阳:☀️|月亮:🌙|星星:⭐|星:⭐|云:☁️|雨:🌧️|雪:❄️|风:🌬️|彩虹:🌈|暴风雨:⛈️|雷:⛈️|雾:🌫️|冰:🧊|火:🔥|树:🌳|树叶:🍃|叶子:🍃|花:🌸|草:🌱|植物:🪴|种子:🌱|玫瑰:🌹|向日葵:🌻|郁金香:🌷|仙人掌:🌵|火山:🌋|天气:🌤️|石头:🪨|行星:🪐|晴朗的:☀️|晴天:☀️|多云的:☁️|下雨的:🌧️|下雪的:❄️|有风的:🌬️|热的:🔥|冷的:🥶|暖和的:🌤️|温暖的:🌤️|时间:⏰|日历:📅|早上:🌅|早晨:🌅|晚上:🌆|夜晚:🌙|生日:🎂|聚会:🎉|派对:🎉|假期:🏖️|圣诞节:🎄|新年:🎆|家庭:🏠|家人:🏠|爸爸:👨|父亲:👨|妈妈:👩|母亲:👩|儿子:👦|女儿:👧|哥哥:👦|弟弟:👦|姐姐:👧|妹妹:👧|男孩:👦|女孩:👧|阿姨:👩|叔叔:👨|奶奶:👵|外婆:👵|祖母:👵|爷爷:👴|外公:👴|祖父:👴|婴儿:👶|宝宝:👶|男人:👨|女人:👩|孩子:🧒|儿童:🧒|人们:👥|国王:🤴|王后:👸|王子:🤴|公主:👸|医生:🧑‍⚕️|护士:🧑‍⚕️|警察:👮|农民:🧑‍🌾|厨师:🧑‍🍳|司机:🚗|飞行员:🧑‍✈️|工人:👷|科学家:🧑‍🔬|画家:🧑‍🎨|艺术家:🧑‍🎨|歌手:🧑‍🎤|舞蹈家:💃|作家:✍️|消防员:🧑‍🚒|朋友:🤝|高兴的:😊|开心的:😊|快乐的:😊|难过的:😢|伤心的:😢|生气的:😠|累的:😫|疲倦的:😫|饿的:😋|饥饿的:😋|害怕的:😨|惊讶的:😮|兴奋的:🤩|困的:😴|生病的:🤒|无聊的:😑|担心的:😟|有趣的:😂|可爱的:🥰|强壮的:💪|大的:🐘|小的:🐭|快的:⚡|慢的:🐢|好的:👍|坏的:👎|干净的:🧼|新的:🆕|睡觉:😴|走路:🚶|散步:🚶|跑:🏃|跑步:🏃|跳:🤸|游泳:🏊|爬山:🧗|攀爬:🧗|听:👂|听音乐:🎧|说话:💬|唱歌:🎤|跳舞:💃|画画:🎨|读书:📖|看书:📖|写:✍️|写作业:📝|做作业:📝|学习:📚|想:🤔|笑:😂|哭:😢|微笑:😊|拥抱:🤗|滑冰:⛸️|滑雪:⛷️|钓鱼:🎣|去钓鱼:🎣|野营:🏕️|去野营:🏕️|远足:🥾|徒步:🥾|购物:🛍️|去购物:🛍️|骑马:🏇|划船:🚣|拍照:📷|拍照片:📷|植树:🌳|种树:🌳|堆雪人:☃️|雪人:☃️|野餐:🧺|做饭:🍳|洗:🧼|洗澡:🛁|淋浴:🚿|刷牙:🪥|打扫:🧹|扫地:🧹|看电视:📺|放风筝:🪁|风筝:🪁|起床:⏰|上学:🏫|游戏:🎮|玩游戏:🎮|玩具:🧸|拼图:🧩|机器人:🤖|球:⚽|足球:⚽|踢足球:⚽|篮球:🏀|打篮球:🏀|排球:🏐|棒球:⚾|乒乓球:🏓|打乒乓球:🏓|网球:🎾|国际象棋:♟️|下棋:♟️|鼓:🥁|小号:🎺|吉他:🎸|钢琴:🎹|弹钢琴:🎹|小提琴:🎻|运动:🏅|奖牌:🏅|奖杯:🏆|红色:🔴|红色的:🔴|黄色:🟡|黄色的:🟡|蓝色:🔵|蓝色的:🔵|绿色:🟢|绿色的:🟢|紫色:🟣|紫色的:🟣|橙色:🟠|橙色的:🟠|黑色:⚫|黑色的:⚫|白色:⚪|白色的:⚪|棕色:🟤|棕色的:🟤|粉色:🌸|粉红色:🌸|圆:⭕|圆形:⭕|正方形:🟥|三角形:🔺|你好:👋|再见:👋|谢谢:🙏|对不起:🙇|欢迎:👋|停:🛑|红绿灯:🚦|交通灯:🚦|点钟:🕐|就寝时间:🛏️|睡觉时间:🛏️|录音机:📼|练习本:📓|作业本:📓|锻炼:🏃|蛋糕:🎂";
 const ZH_EMOJI = {};
 ZH_RAW.split('|').forEach(p => { const i = p.indexOf(':'); if (i > 0) ZH_EMOJI[p.slice(0, i).trim()] = p.slice(i + 1).trim(); });
 
@@ -550,11 +633,24 @@ const AVATARS = ['🦁', '🐼', '🐰', '🐱', '🐶', '🦊', '🐸', '🐯']
 /* ---- 头像兑换：用星星换更高级的头像 ---- */
 const TIERS = [
   { id: 'free', name: '基础', cost: 0, title: '', list: [['🦁', '狮子'], ['🐼', '熊猫'], ['🐰', '兔子'], ['🐱', '小猫'], ['🐶', '小狗'], ['🦊', '狐狸'], ['🐸', '青蛙'], ['🐯', '老虎']] },
-  { id: 'rare', name: '稀有', cost: 100, title: '稀有勇士', list: [['🐨', '考拉'], ['🐧', '企鹅'], ['🦉', '猫头鹰'], ['🐢', '乌龟'], ['🐙', '章鱼'], ['🦋', '蝴蝶']] },
-  { id: 'epic', name: '史诗', cost: 300, title: '史诗勇士', list: [['🦄', '独角兽'], ['🦖', '霸王龙'], ['🦈', '鲨鱼'], ['🐬', '海豚'], ['🦩', '火烈鸟'], ['🦚', '孔雀']] },
-  { id: 'leg', name: '传说', cost: 800, title: '传说勇士', list: [['🐲', '小龙'], ['🤖', '机器人'], ['👽', '外星人'], ['🧙', '魔法师'], ['🦸', '超级英雄'], ['🧚', '小精灵']] }
+  { id: 'rare', name: '稀有', cost: 100, title: '稀有勇士', list: [['img:icefox', '冰晶狐'], ['img:starcat', '星星猫'], ['img:boltbunny', '闪电兔'], ['img:magicowl', '魔法猫头鹰'], ['img:astrobear', '宇航员小熊'], ['img:parrot', '彩虹小鹦鹉']],
+    old: [['🐨', '考拉'], ['🐧', '企鹅'], ['🦉', '猫头鹰'], ['🐢', '乌龟'], ['🐙', '章鱼'], ['🦋', '蝴蝶']] },
+  { id: 'epic', name: '史诗', cost: 300, title: '史诗勇士', list: [['img:unicorn', '彩虹独角兽'], ['img:flamelion', '火焰狮子'], ['img:mechadino', '机甲恐龙'], ['img:crystalwhale', '水晶鲸鱼'], ['img:starwolf', '星空狼'], ['img:sakuradeer', '樱花小鹿']],
+    old: [['🦄', '独角兽'], ['🦖', '霸王龙'], ['🦈', '鲨鱼'], ['🐬', '海豚'], ['🦩', '火烈鸟'], ['🦚', '孔雀']] },
+  { id: 'leg', name: '传说', cost: 800, title: '传说勇士', list: [['img:golddragon', '黄金龙'], ['img:phoenix', '火凤凰'], ['img:ninefox', '九尾灵狐'], ['img:qilin', '星河麒麟'], ['img:thundertiger', '雷电白虎'], ['img:mechabear', '宇宙机甲熊']],
+    old: [['🐲', '小龙'], ['🤖', '机器人'], ['👽', '外星人'], ['🧙', '魔法师'], ['🦸', '超级英雄'], ['🧚', '小精灵']] }
 ];
-const ALL_AV = TIERS.flatMap(t => t.list.map(([e, n]) => ({ e, n, tier: t })));
+// 旧款头像（V1.9 以前的表情头像）已下架：孩子兑换过的照样能戴，商店里不再出售
+const ALL_AV = TIERS.flatMap(t => [...t.list.map(([e, n]) => ({ e, n, tier: t })), ...(t.old || []).map(([e, n]) => ({ e, n, tier: t, old: true }))]);
+const SHOP_AV = () => ALL_AV.filter(a => !a.old || S.avatars.includes(a.e));
+// 头像框：等级越高越华丽。原创头像是图片，基础和旧款头像是表情
+function avBox(e, size, mode) {
+  const a = AV(e), t = a.tier.id, s = size || 56;
+  const img = /^img:/.test(e) && window.WH_AVATARS && window.WH_AVATARS[e.slice(4)];
+  const face = img ? `<i class="pimg avp-${e.slice(4)}" role="img" aria-label="${esc(a.n)}"></i>` : (/^img:/.test(e) ? '⭐' : e);
+  const sp = t === 'epic' || t === 'leg' ? '<i class="sp s1"></i><i class="sp s2"></i><i class="sp s3"></i><i class="sp s4"></i>' + (t === 'leg' ? '<i class="sp s5"></i><i class="sp s6"></i>' : '') : '';
+  return `<span class="avx t-${t} ${img ? 'pic' : ''} ${mode || ''}" style="--s:${s}px">${t === 'leg' ? '<i class="rays"></i>' : ''}${t === 'epic' || t === 'leg' ? '<i class="halo"></i>' : ''}<i class="ring"></i><span class="face">${face}</span>${t === 'rare' ? '<b class="badge">★</b>' : ''}${sp}${t === 'leg' ? '<span class="crown">👑</span>' : ''}</span>`;
+}
 const AV = e => ALL_AV.find(a => a.e === e) || ALL_AV[0];
 const FREE_AV = TIERS[0].list.map(x => x[0]);
 const frameOf = e => { const t = AV(e).tier.id; return t === 'free' ? '' : 'fr-' + t; };
@@ -806,7 +902,7 @@ function addStars(n) { if (!n) return; S.stars += n; S.starsEarned = (S.starsEar
 // 下一个可以兑换的目标：还没拥有的头像里最便宜的一个
 function nextGoal(bal) {
   bal = bal == null ? S.stars : bal;
-  const cand = ALL_AV.filter(a => a.tier.cost > 0 && !S.avatars.includes(a.e));
+  const cand = ALL_AV.filter(a => a.tier.cost > 0 && !a.old && !S.avatars.includes(a.e));
   if (!cand.length) return null;
   const a = cand.sort((x, y) => x.tier.cost - y.tier.cost)[0];
   return { av: a, ok: bal >= a.tier.cost, need: Math.max(0, a.tier.cost - bal) };
@@ -1789,7 +1885,7 @@ function vHome() {
   const doneToday = S.lastStudy === today();
   return `
   <div class="topbar">
-    <div class="brand"><button class="avatar btnav ${frameOf(S.settings.avatar)}" onclick="App.shop()" aria-label="头像商店">${S.settings.avatar}</button>你好，${esc(S.settings.nick)}！${AV(S.settings.avatar).tier.title ? `<span class="title-tag tt-${AV(S.settings.avatar).tier.id}">${AV(S.settings.avatar).tier.title}</span>` : ''}</div>
+    <div class="brand"><button class="btnav" onclick="App.shop()" aria-label="头像商店">${avBox(S.settings.avatar, 56, 'slow')}</button>你好，${esc(S.settings.nick)}！${AV(S.settings.avatar).tier.title ? `<span class="title-tag tt-${AV(S.settings.avatar).tier.id}">${AV(S.settings.avatar).tier.title}</span>` : ''}</div>
     <div class="pills"><span class="pill">⭐ ${S.stars}</span><span class="pill">🔥 连续 ${curStreak()} 天</span></div>
   </div>
   ${STORE_OK ? '' : `<div class="notice">⚠️ 这种打开方式<b>保存不了学习进度</b>，关掉页面后星星和进度会丢失。请家长按部署说明换一种打开方式；临时用的话，每次学完到"家长入口 → 设置与备份"下载一份备份。</div>`}
@@ -1813,7 +1909,7 @@ function vHome() {
     <button class="btn ghost" onclick="App.gate()">🔒 家长入口</button>
   </div>
   <div style="margin-top:12px">
-    <button class="btn ghost" style="width:100%" onclick="App.shop()">🎁 头像商店（已有 ${S.avatars.length}/${ALL_AV.length} 个）</button>
+    <button class="btn ghost" style="width:100%" onclick="App.shop()">🎁 头像商店（已有 ${S.avatars.length}/${SHOP_AV().length} 个）</button>
   </div>`;
 }
 
@@ -1930,19 +2026,24 @@ function vGoal() {
   const g = nextGoal();
   if (!g) return `<div class="card goal"><span class="big-emo">🏆</span><div class="grow"><h3 style="margin:0">所有头像都兑换完啦！</h3><div class="muted small">你是真正的单词大师！</div></div></div>`;
   const pct = Math.min(100, Math.round(S.stars / g.av.tier.cost * 100));
-  return `<div class="card goal"><span class="big-emo">${g.av.e}</span>
+  return `<div class="card goal">${avBox(g.av.e, 64, 'slow')}
     <div class="grow"><h3 style="margin:0 0 4px">${g.ok ? '🎁 星星够啦，可以换新头像！' : `再攒 ${g.need} ⭐ 就能换${g.av.tier.name}头像「${g.av.n}」`}</h3>
       <div class="bar thin"><div style="width:${pct}%"></div></div>
       <div class="muted small" style="margin-top:4px">现在有 ⭐ ${S.stars} 颗 / 需要 ${g.av.tier.cost} 颗</div></div>
     <button class="btn sm ${g.ok ? 'green' : 'ghost'}" onclick="App.shop()">${g.ok ? '去兑换 →' : '看看头像'}</button></div>`;
 }
 
-let SHOPSEL = null;
+let SHOPSEL = null, UNLOCK = null;
+function vUnlock() {
+  const a = AV(UNLOCK), stars = Array.from({ length: a.tier.id === 'leg' ? 18 : 12 }, (_, i) => { const g = i / (a.tier.id === 'leg' ? 18 : 12) * Math.PI * 2, d = 150 + (i % 3) * 45; return `<span class="ul-star" style="--x:${Math.round(Math.cos(g) * d)}px;--y:${Math.round(Math.sin(g) * d)}px;animation-delay:${(.25 + (i % 4) * .06).toFixed(2)}s">${a.tier.id === 'leg' ? '🌟' : '✨'}</span>`; }).join('');
+  return `<div class="unlock u-${a.tier.id}" onclick="App.unlockClose()"><div class="ul-burst"></div><div class="ul-box"><div class="ul-pop">${avBox(UNLOCK, 168)}</div>${stars}
+    <div class="ul-t1">恭喜获得${a.tier.name}头像！</div><div class="ul-t2">「${a.n}」${a.tier.title ? ` · <span class="title-tag tt-${a.tier.id}">${a.tier.title}</span>` : ''}</div><div class="ul-t3">点任意位置继续</div></div></div>`;
+}
 function vShop() {
   const cur = S.settings.avatar;
   const sel = SHOPSEL && AV(SHOPSEL);
   const confirm = sel && !S.avatars.includes(sel.e) ? `<div class="confirm">
-      <div class="big-emo">${sel.e}</div>
+      <div style="margin:18px 0 6px">${avBox(sel.e, 120)}</div>
       <div style="font-size:20px;font-weight:800;margin:6px 0">用 ${sel.tier.cost} ⭐ 兑换${sel.tier.name}头像「${sel.n}」吗？</div>
       <div class="muted small">兑换后还剩 ⭐ ${S.stars - sel.tier.cost} 颗${sel.tier.title ? `，还能得到称号「${sel.tier.title}」` : ''}</div>
       <div class="btns"><button class="btn ghost" onclick="App.shopCancel()">再想想</button><button class="btn green" onclick="App.shopBuy()">确认兑换</button></div>
@@ -1952,14 +2053,14 @@ function vShop() {
     const st = isCur ? '<span class="av-st ok">✓ 使用中</span>' : own ? '<span class="av-st ok">换上</span>'
       : can ? `<span class="av-st buy">⭐ ${a.tier.cost} 兑换</span>` : `<span class="av-st">🔒 还差 ${a.tier.cost - S.stars}</span>`;
     return `<button class="av-tile ${isCur ? 'cur' : ''} ${!own && !can ? 'lock' : ''}" onclick="App.shopPick('${a.e}')">
-      <span class="av-face ${a.tier.id === 'free' ? '' : 'fr-' + a.tier.id}">${a.e}</span><span class="av-name">${a.n}</span>${st}</button>`;
+      ${avBox(a.e, 72)}<span class="av-name">${a.n}${a.old ? '<small>（旧款）</small>' : ''}</span>${st}</button>`;
   };
   return `<div class="sess-top"><button class="x" onclick="App.home()">←</button><h2 style="margin:0">🎁 头像商店</h2></div>
     <div class="card shop-head"><div><div style="font-size:26px;font-weight:800">⭐ ${S.stars}</div><div class="muted small">现在能用的星星 · 累计获得 ${S.starsEarned || 0} 颗</div></div>
-      <div class="muted small" style="max-width:320px">答对题、完成一轮都能得星星。攒够了就来换更酷的头像，越高级的头像边框越闪亮！</div></div>
+      <div class="muted small" style="max-width:320px">答对题、完成一轮都能得星星。攒够了就来换更酷的头像：稀有、史诗、传说一级比一级闪亮，传说头像还戴着皇冠！</div></div>
     ${confirm}
     ${TIERS.map(t => `<div class="card"><div class="tier-h"><h3 style="margin:0">${t.name}头像</h3>${t.title ? `<span class="title-tag tt-${t.id}">${t.title}</span>` : ''}<span class="price">${t.cost ? `每个 ⭐ ${t.cost}` : '免费'}</span></div>
-      <div class="av-grid">${ALL_AV.filter(a => a.tier === t).map(tile).join('')}</div></div>`).join('')}`;
+      <div class="av-grid">${SHOP_AV().filter(a => a.tier === t).map(tile).join('')}</div></div>`).join('')}${UNLOCK ? vUnlock() : ''}`;
 }
 
 /* ========== 听写 ==========
@@ -2361,7 +2462,7 @@ function vParent() {
     body = `<div class="card"><h3>👦 孩子信息与题型</h3>
       <label class="f">孩子昵称</label><input class="t" maxlength="12" value="${esc(S.settings.nick)}" onchange="App.setNick(this.value)">
       <label class="f">头像（孩子用星星兑换的头像也在这里）</label>
-      <div class="seg av">${ALL_AV.filter(a => S.avatars.includes(a.e)).map(a => `<button class="${S.settings.avatar === a.e ? 'on' : ''}" onclick="App.setAv(${ALL_AV.indexOf(a)},this)">${a.e}</button>`).join('')}</div>
+      <div class="seg av avsel">${ALL_AV.filter(a => S.avatars.includes(a.e)).map(a => `<button class="${S.settings.avatar === a.e ? 'on' : ''}" onclick="App.setAv(${ALL_AV.indexOf(a)},this)" title="${esc(a.n)}">${avBox(a.e, 44, 'still')}</button>`).join('')}</div>
       <label class="f">孩子的年级（决定题型和每天建议的新词量）</label>
       <div class="seg">${Object.entries(GRADE).map(([k, g]) => `<button class="${S.settings.grade === k ? 'on' : ''}" onclick="App.setGrade('${k}',this)">${g.label}</button>`).join('')}</div>
       <div class="muted small" style="margin-top:6px">低年级：听音选图 + 看图选词 + 字母块；中年级：再加键盘拼写；高年级：以键盘拼写为主。</div>
@@ -2677,7 +2778,7 @@ const App = {
   },
   shopPick(e) {
     const a = AV(e);
-    if (S.avatars.includes(e)) { SHOPSEL = null; if (S.settings.avatar !== e) { S.settings.avatar = e; save(); toast(`换上了「${a.n}」${e}`); } render(); return; }
+    if (S.avatars.includes(e)) { SHOPSEL = null; if (S.settings.avatar !== e) { S.settings.avatar = e; save(); toast(`换上了「${a.n}」`); } render(); return; }
     if (S.stars < a.tier.cost) { toast(`还差 ${a.tier.cost - S.stars} 颗星星，继续加油！`); return; }
     SHOPSEL = e; render(); try { window.scrollTo(0, 0); } catch (x) {}
   },
@@ -2685,8 +2786,10 @@ const App = {
     const a = SHOPSEL && AV(SHOPSEL); SHOPSEL = null;
     if (!a || S.avatars.includes(a.e) || S.stars < a.tier.cost) { render(); return; }
     S.stars -= a.tier.cost; S.avatars.push(a.e); S.settings.avatar = a.e; save();
-    sfx.done(); render(); confetti(); toast(`🎉 兑换成功！换上了「${a.n}」`);
+    UNLOCK = a.e; sfx.done(); render(); try { window.scrollTo(0, 0); } catch (x) {}
+    if (a.tier.id === 'leg') setTimeout(() => confetti(), 450);
   },
+  unlockClose() { UNLOCK = null; render(); },
   shopCancel() { SHOPSEL = null; render(); },
   setNick(v) { S.settings.nick = String(v).trim().slice(0, 12) || '小勇士'; save(); toast('已保存昵称'); },
   setSpeak(v, el) { S.settings.speakOn = v; save(); segOn(el); },
@@ -2823,6 +2926,13 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localh
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 if (isStandalone() && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+(function () {
+  // 原创头像图片只放进样式表一次，浏览器解码一次就能反复用
+  if (!window.WH_AVATARS) return;
+  const st = document.createElement('style');
+  const A = window.WH_AVATARS; st.textContent = Object.keys(A).map(k => `.avp-${k}{background-image:url(${A[k]})}`).join('\n');
+  try { (document.head || document.body).appendChild(st); } catch (e) {}
+})();
 emjStart();
 render();
 checkHash();
