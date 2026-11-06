@@ -1,0 +1,5 @@
+单词小勇士 · 标准发音引擎用到的开源组件
+- Kokoro-82M 语音模型（hexgrad，Apache-2.0），ONNX 版本来自 onnx-community/Kokoro-82M-v1.0-ONNX
+- kokoro-js 1.2.1（Apache-2.0），内含 Transformers.js 3.5.1（Apache-2.0）和 phonemizer / eSpeak NG（GPL-3.0）
+- ONNX Runtime Web（MIT）
+统一图标：Microsoft Fluent Emoji（MIT）

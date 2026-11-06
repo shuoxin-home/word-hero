@@ -1,0 +1,81 @@
+{
+ "version": "kokoro82m-q8-v1",
+ "lib": "kokoro.web.js",
+ "ortMjs": "ort/ort-wasm-simd-threaded.jsep.mjs",
+ "ortWasm": "ort/ort-wasm-simd-threaded.jsep.wasm",
+ "modelParts": [
+  "model/model_q8.part1",
+  "model/model_q8.part2",
+  "model/model_q8.part3",
+  "model/model_q8.part4",
+  "model/model_q8.part5"
+ ],
+ "modelSize": 92361116,
+ "modelSha256": "fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478",
+ "voices": {
+  "us": "af_heart",
+  "gb": "bf_emma"
+ },
+ "files": [
+  {
+   "name": "kokoro.web.js",
+   "size": 2135106
+  },
+  {
+   "name": "model/config.json",
+   "size": 44
+  },
+  {
+   "name": "model/model_q8.part1",
+   "size": 18472224
+  },
+  {
+   "name": "model/model_q8.part2",
+   "size": 18472224
+  },
+  {
+   "name": "model/model_q8.part3",
+   "size": 18472224
+  },
+  {
+   "name": "model/model_q8.part4",
+   "size": 18472224
+  },
+  {
+   "name": "model/model_q8.part5",
+   "size": 18472220
+  },
+  {
+   "name": "model/tokenizer.json",
+   "size": 3497
+  },
+  {
+   "name": "model/tokenizer_config.json",
+   "size": 113
+  },
+  {
+   "name": "ort/ort-wasm-simd-threaded.jsep.mjs",
+   "size": 44484
+  },
+  {
+   "name": "ort/ort-wasm-simd-threaded.jsep.wasm",
+   "size": 21596019
+  },
+  {
+   "name": "voices/af_heart.bin",
+   "size": 522240
+  },
+  {
+   "name": "voices/bf_emma.bin",
+   "size": 522240
+  },
+  {
+   "name": "tts-worker.js",
+   "size": 7300
+  },
+  {
+   "name": "LICENSES.txt",
+   "size": 362
+  }
+ ]
+}
