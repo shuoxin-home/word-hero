@@ -1,5 +1,5 @@
 /* 单词小勇士 离线缓存。更新应用时，把下面的版本号改一下 */
-const CACHE = 'wordhero-v20';
+const CACHE = 'wordhero-v21';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './icons.js', './avatars.js'];
 
 self.addEventListener('install', e => {

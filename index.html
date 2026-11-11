@@ -383,6 +383,15 @@ select.t{height:46px;background:#fff}
 .tt-epic{background:linear-gradient(90deg,#8C6CF2,#E36BD0)!important;color:#fff!important}
 .tt-leg{background:linear-gradient(90deg,#FFB300,#FFE066,#FFB300)!important;color:#7A4A00!important;box-shadow:0 0 8px rgba(255,190,40,.7)}
 @media (max-width:620px){ .av-grid .avx{--s:58px!important} }
+/* 校正读音 */
+.btn.xs{padding:4px 10px;font-size:13px;min-height:0;border-radius:10px}
+.pr-ov{position:fixed;inset:0;z-index:40;background:rgba(20,24,40,.45);display:grid;place-items:center;padding:16px}
+.pr-box{width:min(560px,100%);max-height:90vh;overflow:auto;margin:0}
+.pr-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border:2px solid var(--line);border-radius:14px;margin-top:8px}
+.pr-row.on{border-color:var(--green);background:var(--green-bg)}
+.pr-l{flex:1;min-width:150px;display:flex;flex-direction:column;gap:2px}
+.pr-ipa{font-family:var(--en),'Segoe UI',sans-serif;font-size:16px;color:var(--ink2)}
+.pr-cur{font-weight:800;color:var(--green-d);font-size:14px;padding:0 6px}
 </style>
 
 <div id="app"><div id="fx"></div><div id="view"></div></div>
@@ -824,7 +833,7 @@ function newTask(o) {
 }
 function initState() {
   return { v: 2, settings: { grade: 'mid', nick: '小勇士', avatar: '🦁', kb: 'auto', sentOn: true, tts: 'std', accent: 'us', icons: 'fluent', ttsDl: '' },
-    tasks: SEEDS.filter(x => x.name && !x.mergeInto).map(x => newTask(x)), seeds: SEED_IDS.slice(), stars: 0, starsEarned: 0, avatars: FREE_AV.slice(), dictLog: [], dictBest: {}, resume: {}, streak: 0, lastStudy: null, dayOffset: 0, lastBackup: null };
+    tasks: SEEDS.filter(x => x.name && !x.mergeInto).map(x => newTask(x)), seeds: SEED_IDS.slice(), stars: 0, starsEarned: 0, avatars: FREE_AV.slice(), dictLog: [], dictBest: {}, prons: {}, resume: {}, streak: 0, lastStudy: null, dayOffset: 0, lastBackup: null };
 }
 // 兼容旧版本（只有一份词表）的数据和备份：自动变成第一个任务
 function normalize(st) {
@@ -855,6 +864,7 @@ function normalize(st) {
     tid: x.tid, tname: String(x.tname || '').slice(0, 20), date: String(x.date || '').slice(0, 10), mode: DM.includes(x.mode) ? x.mode : 'audio',
     scope: String(x.scope || 'all').slice(0, 10), n: Number(x.n) || 0, c: Math.min(Number(x.c) || 0, Number(x.n) || 0), stars: Number(x.stars) || 0, capped: !!x.capped,
     wrong: (Array.isArray(x.wrong) ? x.wrong : []).slice(0, 80).map(y => ({ id: String((y && y.id) || ''), ans: String((y && y.ans) || '').slice(0, 40) })) }));
+  s.prons = cleanProns(st.prons);
   s.dictBest = {};
   if (st.dictBest && typeof st.dictBest === 'object') Object.entries(st.dictBest).forEach(([k, v]) => { if (v && Number(v.n) > 0) s.dictBest[k] = { c: Math.min(Number(v.c) || 0, Number(v.n)), n: Number(v.n), date: String(v.date || '').slice(0, 10) }; });
   return s;
@@ -959,7 +969,15 @@ function pickVoice() {
 // 先用内置标准发音，没准备好就用设备自带的语音
 function speak(text, onend) {
   if (TTS.usable()) { TTS.say(String(text), onend); return; }
+  lastSrc(String(text), 'sys', S.settings.tts === 'sys' ? '设置里选的是设备自带语音' : TTS.why() ? '这种打开方式用不了标准发音' : TTS.st === 'loading' || TTS.st === 'checking' ? '标准发音还在加载' : TTS.st === 'dl' ? '标准发音还在下载' : TTS.st === 'error' ? '标准发音出错了' : '标准发音还没下载');
   sysSpeak(text, onend);
+}
+// 记下最近一次是谁在读，方便家长判断读错是哪边的问题
+let LAST_SRC = null;
+function lastSrc(text, src, why) { LAST_SRC = { text: String(text).slice(0, 40), src, why: why || '', at: Date.now() }; if (view === 'parent' && PTAB === 'set') { const el = document.getElementById('tts_last'); if (el) el.innerHTML = lastSrcHtml(); } }
+function lastSrcHtml() {
+  if (!LAST_SRC) return '';
+  return `最近一次读音：「${esc(LAST_SRC.text)}」· ${LAST_SRC.src === 'std' ? '✅ 标准发音' : '⚠️ 设备自带语音'}${LAST_SRC.why ? `（${esc(LAST_SRC.why)}）` : ''}`;
 }
 function sysSpeak(text, onend) {
   let fired = false;
@@ -997,6 +1015,22 @@ function tone(freqs, dur, type) {
 }
 const sfx = { ok: () => tone([660, 880, 1320], .1, 'triangle'), retry: () => tone([392, 330], .16, 'sine'), done: () => tone([523, 659, 784, 1047], .13, 'triangle') };
 
+/* ========== 校正读音 ==========
+   S.prons：{ 单词(小写): { k: 'ipa', ipa, src } 按音标读 | { k: 'sys' } 用设备自带语音 }，学习、复习、听写都按这个读 */
+const PRON_LIB = {"bedtime":[["bˈɛdtaɪm","人工整理"]],"dinner":[["dˈɪnɚ","人工整理"]],"read":[["ɹˈiːd","读（现在）"],["ɹˈɛd","读过（过去）"]],"live":[["lˈɪv","居住（动词）"],["lˈaɪv","活的；现场的"]],"wind":[["wˈɪnd","风"],["wˈaɪnd","缠绕；上发条"]],"close":[["klˈoʊz","关上（动词）"],["klˈoʊs","近的"]],"use":[["jˈuːz","使用（动词）"],["jˈuːs","用途（名词）"]],"record":[["ɹˈɛkɚd","记录；唱片（名词）"],["ɹɪkˈɔːɹd","录制（动词）"]],"present":[["pɹˈɛzənt","礼物；现在的"],["pɹɪzˈɛnt","颁发；展示（动词）"]],"tear":[["tˈɪɹ","眼泪"],["tˈɛɹ","撕（动词）"]],"lead":[["lˈiːd","带领"],["lˈɛd","铅"]],"bow":[["bˈaʊ","鞠躬"],["bˈoʊ","弓；蝴蝶结"]],"minute":[["mˈɪnɪt","分钟"],["maɪnˈuːt","微小的"]],"row":[["ɹˈoʊ","一排；划船"],["ɹˈaʊ","吵架"]],"object":[["ˈɑːbdʒɛkt","物体（名词）"],["əbdʒˈɛkt","反对（动词）"]],"desert":[["dˈɛzɚt","沙漠"],["dɪzˈɜːɹt","抛弃（动词）"]],"wound":[["wˈuːnd","伤口"],["wˈaʊnd","缠绕（wind 的过去式）"]],"project":[["pɹˈɑːdʒɛkt","项目（名词）"],["pɹədʒˈɛkt","投射（动词）"]],"produce":[["pɹədˈuːs","生产（动词）"],["pɹˈoʊduːs","农产品（名词）"]],"content":[["kˈɑːntɛnt","内容（名词）"],["kəntˈɛnt","满意的"]],"refuse":[["ɹɪfjˈuːz","拒绝（动词）"],["ɹˈɛfjuːs","垃圾（名词）"]],"subject":[["sˈʌbdʒɛkt","科目；主题（名词）"],["səbdʒˈɛkt","使服从（动词）"]],"excuse":[["ɪkskjˈuːz","原谅（动词）"],["ɪkskjˈuːs","借口（名词）"]],"polish":[["pˈɑːlɪʃ","擦亮"],["pˈoʊlɪʃ","波兰的"]]};
+const pronKey = t => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim();
+const pronOf = t => (S.prons || {})[pronKey(t)] || null;
+function cleanPron(p) {
+  if (!p || typeof p !== 'object') return null;
+  if (p.k === 'sys') return { k: 'sys' };
+  if (p.k === 'ipa' && typeof p.ipa === 'string' && p.ipa.trim() && p.ipa.length <= 80 && !/[<>&"`\\]/.test(p.ipa)) return { k: 'ipa', ipa: p.ipa.trim(), src: String(p.src || '').replace(/[<>&"`]/g, '').slice(0, 30) };
+  return null;
+}
+function cleanProns(o) {
+  const out = {};
+  if (o && typeof o === 'object' && !Array.isArray(o)) Object.entries(o).slice(0, 2000).forEach(([k, v]) => { const c = cleanPron(v), kk = pronKey(k); if (c && kk && kk.length <= 60) out[kk] = c; });
+  return out;
+}
 /* ========== 标准发音引擎（内置，不依赖设备上的语音） ========== */
 const LS = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }, del(k) { try { localStorage.removeItem(k); } catch (e) {} } };
 const TTS = {
@@ -1035,11 +1069,21 @@ const TTS = {
     this.kill();
     this.set(download ? 'dl' : 'checking', '');
     if (download) { this.pct = 0; this.mb = 0; try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {} }
-    let src = null;
+    let src = null, upd = false;
     try {
       const c = await caches.open(this.CACHE), u = this.base() + 'tts-worker.js';
       let r = await c.match(u);
       if (!r && download) { const n = await fetch(u, { cache: 'no-store' }); if (n.ok) { await c.put(u, n.clone()); r = n; } }
+      // 联网时检查引擎有没有小更新：版本变了就先换新的引擎脚本
+      if (r && !download && navigator.onLine !== false) {
+        try {
+          const mr = await fetch(this.base() + 'manifest.json', { cache: 'no-store' });
+          if (mr.ok) {
+            const mj = await mr.json(), old = await c.match(this.base() + 'manifest.json'), oj = old ? await old.json() : null;
+            if (!oj || oj.version !== mj.version) { const n = await fetch(u, { cache: 'no-store' }); if (n.ok) { await c.put(u, n.clone()); r = n; upd = true; } }
+          }
+        } catch (e) {}
+      }
       if (r) src = await r.text();
     } catch (e) {}
     if (!src) { this.set(download ? 'error' : 'nodl', download ? '找不到引擎文件（tts 文件夹没有一起上传？）' : ''); return; }
@@ -1048,7 +1092,7 @@ const TTS = {
     } catch (e) { this.set('error', '这个浏览器不能运行发音引擎'); return; }
     this.w.onmessage = e => this.onmsg(e.data || {});
     this.w.onerror = e => { e.preventDefault && e.preventDefault(); this.fail(e.message || '引擎出错了'); };
-    this.w.postMessage({ type: 'init', base: this.base(), download: !!download });
+    this.w.postMessage({ type: 'init', base: this.base(), download: !!download, update: upd });
   },
   kill() {
     if (this.w) { try { this.w.terminate(); } catch (e) {} }
@@ -1071,6 +1115,8 @@ const TTS = {
       this.set('ready', '');
       setTimeout(() => this.warm(), 1500);
     } else if (m.type === 'error') { this.fail(m.msg);
+    } else if (m.type === 'phon') {
+      const f = this.cb[m.id]; delete this.cb[m.id]; if (f) f(m.err ? null : m.out);
     } else if (m.type === 'audio') {
       const f = this.cb[m.id]; delete this.cb[m.id]; this.busy = false;
       if (!m.err) { this.nGen++; this.genMs = this.genMs ? Math.round(this.genMs * 0.7 + m.ms * 0.3) : m.ms; }
@@ -1078,13 +1124,14 @@ const TTS = {
       this.pump();
     }
   },
-  akey(voice, text) { return this.base().replace(/tts\/$/, '') + 'tts-audio/' + voice + '/' + encodeURIComponent(text); },
+  akey(voice, text, ipa) { return this.base().replace(/tts\/$/, '') + 'tts-audio/' + voice + '/' + encodeURIComponent(text) + (ipa ? '@' + encodeURIComponent(ipa) : ''); },
   speed(text) { return text.length > 24 ? 0.9 : 0.85; },
   // 排队合成：孩子正在等的（hi）先做，后台预先合成的（lo）往后放
-  gen(text, voice, hi) {
+  gen(text, voice, hi, ipa) {
+    ipa = ipa || '';
     return new Promise(res => {
-      const j = this.q.find(x => x.text === text && x.voice === voice);
-      if (j) { j.res.push(res); if (hi) j.hi = true; } else this.q.push({ text, voice, hi, res: [res] });
+      const j = this.q.find(x => x.text === text && x.voice === voice && x.ipa === ipa);
+      if (j) { j.res.push(res); if (hi) j.hi = true; } else this.q.push({ text, voice, hi, ipa, res: [res] });
       this.pump();
     });
   },
@@ -1094,10 +1141,10 @@ const TTS = {
     const j = this.q.splice(i, 1)[0], id = ++this.seq;
     this.busy = true;
     this.cb[id] = async wav => {
-      if (wav) { try { const c = await caches.open(this.ACACHE); await c.put(this.akey(j.voice, j.text), new Response(wav.slice(0), { headers: { 'Content-Type': 'audio/wav' } })); if (this.inCache) this.inCache.add(this.akey(j.voice, j.text)); } catch (e) {} }
+      if (wav) { try { const c = await caches.open(this.ACACHE), ak = this.akey(j.voice, j.text, j.ipa); await c.put(ak, new Response(wav.slice(0), { headers: { 'Content-Type': 'audio/wav' } })); if (this.inCache) this.inCache.add(ak); } catch (e) {} }
       j.res.forEach(f => f(wav));
     };
-    this.w.postMessage({ type: 'gen', id, text: j.text, voice: j.voice, speed: this.speed(j.text) });
+    this.w.postMessage({ type: 'gen', id, text: j.text, voice: j.voice, ipa: j.ipa || undefined, speed: this.speed(j.text) });
   },
   ctx() {
     ac = ac || new (window.AudioContext || window.webkitAudioContext)();
@@ -1108,12 +1155,12 @@ const TTS = {
     const c = this.ctx();
     return new Promise((ok, bad) => { const p = c.decodeAudioData(wav.slice(0), ok, bad); if (p && p.then) p.then(ok, bad); });
   },
-  async get(text, hi) {
-    const voice = this.voice(), k = voice + '|' + text;
+  async get(text, hi, ipa) {
+    const voice = this.voice(), k = voice + '|' + text + '|' + (ipa || '');
     if (this.mem.has(k)) return this.mem.get(k);
     let wav = null;
-    try { const c = await caches.open(this.ACACHE), r = await c.match(this.akey(voice, text)); if (r) wav = await r.arrayBuffer(); } catch (e) {}
-    if (!wav) wav = await this.gen(text, voice, hi);
+    try { const c = await caches.open(this.ACACHE), r = await c.match(this.akey(voice, text, ipa)); if (r) wav = await r.arrayBuffer(); } catch (e) {}
+    if (!wav) wav = await this.gen(text, voice, hi, ipa);
     if (!wav) return null;
     const buf = await this.decode(wav);
     if (this.mem.size > 400) this.mem.delete(this.mem.keys().next().value);
@@ -1135,19 +1182,33 @@ const TTS = {
       return true;
     } catch (e) { return false; }
   },
-  say(text, onend) {
+  say(text, onend, opt) {
+    opt = opt || {};
     let fired = false;
     const done = () => { if (fired) return; fired = true; if (onend) onend(); };
     this.stop();
     try { if ('speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel(); } catch (e) {}
+    const pr = 'ipa' in opt ? null : pronOf(text), ipa = 'ipa' in opt ? opt.ipa : pr && pr.k === 'ipa' ? pr.ipa : '';
+    if (pr && pr.k === 'sys') { lastSrc(text, 'sys', '家长给这个词选了设备自带语音'); sysSpeak(text, done); return; }
     const my = this.tok; let fb = false;
-    // 第一次读一个新词要现场合成；等太久就先用系统语音读，合成好的下次直接用
-    const k = this.voice() + '|' + text;
-    const timer = setTimeout(() => { if (my !== this.tok) return; fb = true; sysSpeak(text, done); }, this.mem.has(k) ? 1500 : 3000);
-    this.get(text, true).then(buf => {
+    // 第一次读一个新词要现场合成；等太久就先用系统语音读，合成好的下次直接用（家长试听时多等一会儿，不换）
+    const k = this.voice() + '|' + text + '|' + (ipa || '');
+    const wait = opt.preview ? 30000 : this.mem.has(k) ? 1500 : 3000;
+    const timer = setTimeout(() => { if (my !== this.tok) return; fb = true; lastSrc(text, 'sys', opt.preview ? '标准发音合成超时' : '标准发音合成超过 3 秒，先用了设备自带语音'); sysSpeak(text, done); }, wait);
+    this.get(text, true, ipa).then(buf => {
       if (my !== this.tok || fb) return; clearTimeout(timer);
-      if (!buf || !this.play(buf, done)) sysSpeak(text, done);
-    }).catch(() => { if (my !== this.tok || fb) return; clearTimeout(timer); sysSpeak(text, done); });
+      if (buf && this.play(buf, done)) { lastSrc(text, 'std', ipa ? '按校正过的读音' : ''); return; }
+      lastSrc(text, 'sys', '标准发音合成失败'); sysSpeak(text, done);
+    }).catch(() => { if (my !== this.tok || fb) return; clearTimeout(timer); lastSrc(text, 'sys', '标准发音合成失败'); sysSpeak(text, done); });
+  },
+  // 同一个词按美式、英式两套规则转成音标（给家长挑读音用）
+  phon(text) {
+    return new Promise(res => {
+      if (!this.w || this.st !== 'ready') { res(null); return; }
+      const id = ++this.seq; this.cb[id] = res;
+      this.w.postMessage({ type: 'phon', id, text });
+      setTimeout(() => { if (this.cb[id]) { delete this.cb[id]; res(null); } }, 20000);
+    });
   },
   // 引擎准备好以后，在后台把各个任务里的词和例句先合成好，孩子点的时候就是秒读
   async warm() {
@@ -1159,11 +1220,13 @@ const TTS = {
     let have;
     try { const c = await caches.open(this.ACACHE); have = new Set((await c.keys()).map(r => r.url)); } catch (e) { have = new Set(); }
     this.inCache = have;
-    const todo = [...new Set([...words, ...sents])].filter(t => !have.has(this.akey(voice, t)));
-    this.nWarm = [...new Set([...words, ...sents])].length - todo.length;
+    const ipaOf = t => { const p = pronOf(t); return p && p.k === 'ipa' ? p.ipa : ''; };
+    const all = [...new Set([...words, ...sents])].filter(t => { const p = pronOf(t); return !(p && p.k === 'sys'); });
+    const todo = all.filter(t => !have.has(this.akey(voice, t, ipaOf(t))));
+    this.nWarm = all.length - todo.length;
     for (const t of todo) {
       if (!this.usable() || this.voice() !== voice) return;
-      const wav = await this.gen(t, voice, false);
+      const wav = await this.gen(t, voice, false, ipaOf(t));
       if (wav) { this.nWarm++; this.ui(false); }
       await new Promise(r => setTimeout(r, 250));
     }
@@ -1808,11 +1871,13 @@ const extractCode = text => { const m = String(text || '').match(/(?:#w=|WH1:)([
 
 let SHARE = null, PENDING = null, SCAN = null, RESTORE = null;
 const shareTask = () => TK(STASK) || S.tasks[0];
-const shareKey = t => [t.id, t.name, t.icon, t.required, t.rawList, t.newPerDay, t.deadline, S.settings.grade].join('|');
+const sharePron = t => { const o = {}; t.words.forEach(w => { const p = pronOf(w.en); if (p) o[pronKey(w.en)] = p; }); return o; };
+const shareKey = t => [t.id, t.name, t.icon, t.required, t.rawList, t.newPerDay, t.deadline, S.settings.grade, JSON.stringify(sharePron(t))].join('|');
 async function buildShare() {
   const t = shareTask(); if (!t) return;
   const key = shareKey(t);
-  const code = await makeCode({ v: 2, n: t.name, i: t.icon, r: t.required ? 1 : 0, l: t.rawList, d: t.newPerDay, dl: t.deadline || undefined, g: S.settings.grade });
+  const pr = sharePron(t);
+  const code = await makeCode({ v: 2, n: t.name, i: t.icon, r: t.required ? 1 : 0, l: t.rawList, d: t.newPerDay, dl: t.deadline || undefined, g: S.settings.grade, p: Object.keys(pr).length ? pr : undefined });
   const cur = shareTask(); if (!cur || shareKey(cur) !== key) return;
   const isLink = /^https?:$/.test(location.protocol);
   const link = isLink ? location.origin + location.pathname + '#w=' + code : 'WH1:' + code;
@@ -2401,6 +2466,44 @@ function vEditor() {
   </div>`;
 }
 
+/* ---- 校正读音：列出几个读音，家长听一遍选对的 ---- */
+let PRON = null;
+function pronCell(t, w, i) {
+  const p = pronOf(w.en), lib = PRON_LIB[pronKey(w.en)];
+  const lab = p ? (p.k === 'sys' ? '✓ 自带语音' : '✓ 已校正') : lib ? '🤔 待确认' : '🔊 校正';
+  return `<button class="btn ${p ? 'green' : lib ? 'orange' : 'ghost'} xs" onclick="App.pron('${t.id}',${i})">${lab}</button>`;
+}
+function pronTip(t) {
+  const n = t.words.filter(w => PRON_LIB[pronKey(w.en)] && !pronOf(w.en)).length;
+  return n ? `<div class="muted small" style="margin-bottom:10px">🤔 有 ${n} 个词容易读错（一词多音或之前反映过读错），点表格最右边的"待确认"听一遍、选对的读音。</div>` : '';
+}
+function vPron() {
+  const P = PRON, cur = pronOf(P.en);
+  const isCur = c => c.k === 'def' ? !cur : c.k === 'sys' ? cur && cur.k === 'sys' : cur && cur.k === 'ipa' && cur.ipa === c.ipa;
+  const rows = P.cands.map((c, i) => `<div class="pr-row ${isCur(c) ? 'on' : ''}">
+      <div class="pr-l"><b>${esc(c.label)}</b>${c.ipa ? `<span class="pr-ipa">/${esc(c.ipa)}/</span>` : ''}${c.note ? `<span class="muted small">${esc(c.note)}</span>` : ''}</div>
+      <button class="btn ghost sm" onclick="App.pronPlay(${i})">${P.playing === i ? '⏳ 合成中' : '🔊 试听'}</button>
+      ${isCur(c) ? '<span class="pr-cur">✓ 正在用</span>' : `<button class="btn green sm" onclick="App.pronUse(${i})">用这个</button>`}</div>`).join('');
+  return `<div class="pr-ov" onclick="if(event.target===this)App.pronClose()"><div class="card pr-box">
+    <div class="between"><h3 style="margin:0">🔊 校正读音：${esc(P.en)}</h3><button class="btn ghost sm" onclick="App.pronClose()">关闭</button></div>
+    <div class="muted small" style="margin:6px 0 12px">${esc(P.zh)} · 每个都点"试听"听一遍，选读得对的那个。选好以后，学习、复习、听写都按这个读。</div>
+    ${P.loading ? '<div class="muted" style="padding:12px 0">⏳ 正在准备候选读音……</div>' : ''}
+    ${P.note ? `<div class="notice" style="margin-bottom:10px">${P.note}</div>` : ''}
+    ${rows}
+    <div class="muted small" style="margin-top:12px">都不对？先选"设备自带语音"，再把这个词告诉我，我来单独处理。<br>只改单独读这个词时的读音；例句是整句读的，不受影响。</div>
+  </div></div>`;
+}
+async function pronCands(en) {
+  const k = pronKey(en), out = [], seen = new Set(), add = c => { if (c.ipa && seen.has(c.ipa)) { const o = out.find(x => x.ipa === c.ipa); if (o && c.k === 'ipa' && c.label === '人工整理的读音') o.note = (o.k === 'def' ? '现在用的就是这个，' : '') + '和人工整理的音标一样'; return; } if (c.ipa) seen.add(c.ipa); out.push(c); };
+  const gb = S.settings.accent === 'gb';
+  const ph = await TTS.phon(en);
+  add({ k: 'def', label: '默认读音（自动转换）', ipa: ph ? (gb ? ph.b : ph.a) : '', note: '现在用的就是这个' });
+  (PRON_LIB[k] || []).forEach(([ipa, note]) => add({ k: 'ipa', ipa, label: note === '人工整理' ? '人工整理的读音' : '读作：' + note, note: note === '人工整理' ? '' : '' }));
+  if (ph) { const o = gb ? ph.a : ph.b; if (o) add({ k: 'ipa', ipa: o, label: gb ? '按美式规则转换' : '按英式规则转换' }); }
+  const cur = pronOf(en); if (cur && cur.k === 'ipa') add({ k: 'ipa', ipa: cur.ipa, label: cur.src || '之前选的读音' });
+  out.push({ k: 'sys', label: '设备自带语音', note: '平板自己的英文语音' });
+  return { cands: out, ok: !!ph };
+}
 function vParent() {
   const tabs = [['tasks', '📝 任务'], ['share', '📲 分享与导入'], ['report', '📊 报告'], ['set', '⚙️ 设置与备份']];
   let body = '';
@@ -2454,8 +2557,8 @@ function vParent() {
     ${rt ? `<div class="card"><h3>单词明细</h3>
       <div class="seg" style="margin-bottom:12px">${all.map(t => `<button class="${t === rt ? 'on' : ''}" onclick="App.rsel('${t.id}')">${t.icon} ${esc(t.name)}</button>`).join('')}</div>
       ${top.length ? `<div style="margin-bottom:10px"><b>⚠️ 最常错：</b>${top.map(w => `<span class="wchip" style="display:inline-block;margin:4px">${w.emo} ${esc(w.en)} ×${pOf(rt, w).wrong}</span>`).join('')}</div>` : ''}
-      <div class="tw"><table><tr><th>英文</th><th>中文</th><th>状态</th><th>下次复习</th><th>对/错</th><th>跟读</th></tr>
-      ${rt.words.map(w => { const p = pOf(rt, w); return `<tr><td class="en">${w.emo} ${esc(w.en)}</td><td>${esc(w.zh)}</td><td>${st(p)}</td><td>${rel(p.due)}</td><td>${p.right}/${p.wrong}</td><td>${p.speak ? '⭐'.repeat(p.speak) : p.spoke ? '已练' : '—'}</td></tr>`; }).join('')}</table></div></div>` : ''}`;
+      ${pronTip(rt)}<div class="tw"><table><tr><th>英文</th><th>中文</th><th>状态</th><th>下次复习</th><th>对/错</th><th>读音</th></tr>
+      ${rt.words.map((w, i) => { const p = pOf(rt, w); return `<tr><td class="en">${w.emo} ${esc(w.en)}</td><td>${esc(w.zh)}</td><td>${st(p)}</td><td>${rel(p.due)}</td><td>${p.right}/${p.wrong}</td><td>${pronCell(rt, w, i)}</td></tr>`; }).join('')}</table></div></div>` : ''}${PRON ? vPron() : ''}`;
   } else {
     const R = RESTORE && RESTORE.state;
     const rInfo = R ? (Array.isArray(R.tasks) ? `${R.tasks.length} 个任务 · ${R.tasks.reduce((s, t) => s + ((t.words || []).length), 0)} 个单词` : `1 个任务 · ${(R.words || []).length} 个单词`) : '';
@@ -2491,12 +2594,13 @@ function vParent() {
       <label class="f">口音</label>
       <div class="seg"><button class="${S.settings.accent !== 'gb' ? 'on' : ''}" onclick="App.setAccent('us')">美式</button><button class="${S.settings.accent === 'gb' ? 'on' : ''}" onclick="App.setAccent('gb')">英式</button></div>
       <div id="tts_st" class="muted small" style="margin-top:10px">${ttsStatusHtml()}</div>
+      <div id="tts_last" class="muted small" style="margin-top:4px">${lastSrcHtml()}</div>
       <div class="btns" style="justify-content:flex-start">
         ${!TTS.why() && TTS.wanted() && (TTS.st === 'nodl' || TTS.st === 'error') ? `<button class="btn green sm" onclick="App.ttsGet()">${TTS.st === 'error' && S.settings.ttsDl ? '🔄 重试' : `⬇️ 下载标准发音（约 ${TTS.tot} MB）`}</button>` : ''}
         <button class="btn sm" onclick="App.voiceTest()">🔊 读一句 "Good morning" 试试</button>
         ${!TTS.why() && (S.settings.ttsDl || TTS.st === 'ready') ? `<button class="btn ghost sm" onclick="App.ttsDel(this)">${ttsArm ? '再点一次确认删除' : '🗑️ 删除标准发音'}</button>` : ''}
       </div>
-      <div class="muted small" style="margin-top:10px">标准发音不管平板上装没装英文语音，读出来都一样。用不了或者还没准备好的时候，会自动改用设备自带的语音。<br><b>设备自带语音：</b>${(() => { const v = pickVoice(); return !('speechSynthesis' in window) ? '❌ 这个浏览器不能发音，建议用 Chrome 或 Edge'
+      <div class="muted small" style="margin-top:10px">某个词读得不对：到"报告 → 单词明细"里点这个词右边的"校正"，听几个读音选对的。<br>标准发音不管平板上装没装英文语音，读出来都一样。用不了或者还没准备好的时候，会自动改用设备自带的语音。<br><b>设备自带语音：</b>${(() => { const v = pickVoice(); return !('speechSynthesis' in window) ? '❌ 这个浏览器不能发音，建议用 Chrome 或 Edge'
         : v ? `✅ 使用的英文语音：${esc(v.name)}${v.localService === false ? '（联网语音，断网或国内网络下可能没声音）' : '（本机语音，断网也能用）'}`
         : '⚠️ 没找到英文语音。安卓上请到 系统设置 → 文字转语音（TTS）输出，把首选引擎设为 Google 语音服务，并下载"英语（美国）"语音包。'; })()}</div></div>
     <div class="card"><h3>🖼️ 图片样式</h3>
@@ -2629,6 +2733,33 @@ const App = {
     ta.value = r.text; App.picClose(); App.edPlan();
     toast(`已给 ${r.n} 个词配好图，记得点"保存"`);
   },
+  async pron(tid, i) {
+    const t = TK(tid), w = t && t.words[i]; if (!w) return;
+    PRON = { tid, en: w.en, zh: w.zh, cands: [{ k: 'sys', label: '设备自带语音', note: '平板自己的英文语音' }], loading: true, playing: -1, note: '' };
+    render();
+    if (!TTS.usable()) { PRON.loading = false; PRON.note = '标准发音还没准备好（' + ttsStatusHtml().replace(/<[^>]+>/g, '').slice(0, 40) + '…），现在只能试听设备自带语音。先到"设置与备份 → 🔊 发音"里下载好标准发音，候选读音才会出来。'; render(); return; }
+    const me = PRON, res = await pronCands(w.en);
+    if (PRON !== me) return;
+    PRON.cands = res.cands; PRON.loading = false;
+    if (!res.ok) PRON.note = '没拿到自动转换的音标，下面只列了整理好的读音。';
+    render();
+  },
+  pronPlay(i) {
+    const P = PRON, c = P && P.cands[i]; if (!c) return;
+    if (c.k === 'sys') { TTS.stop(); sysSpeak(P.en); return; }
+    if (!TTS.usable()) { toast('标准发音还没准备好'); return; }
+    P.playing = i; render();
+    TTS.say(P.en, () => { if (PRON === P && P.playing === i) { P.playing = -1; render(); } }, { ipa: c.k === 'def' ? '' : c.ipa, preview: true });
+  },
+  pronUse(i) {
+    const P = PRON, c = P && P.cands[i]; if (!c) return;
+    const k = pronKey(P.en);
+    if (c.k === 'def') delete S.prons[k];
+    else if (c.k === 'sys') S.prons[k] = { k: 'sys' };
+    else S.prons[k] = { k: 'ipa', ipa: c.ipa, src: c.label.slice(0, 30) };
+    save(); toast(`「${P.en}」以后按「${c.label}」读`); PRON = null; render();
+  },
+  pronClose() { PRON = null; TTS.stop(); render(); },
   setIcons(v) { S.settings.icons = v; save(); LAST_KEY = ''; render(); },
   setSent(v, el) { S.settings.sentOn = v; save(); segOn(el); },
   setKb(v, el) { S.settings.kb = v; save(); segOn(el); },
@@ -2660,7 +2791,7 @@ const App = {
 
   /* ---- 任务管理 ---- */
   edit(tid) {
-    delArm = false; PIC = null;
+    delArm = false; PIC = null; PRON = null;
     if (tid === 'new') {
       const used = new Set(S.tasks.map(t => t.icon));
       EDIT = { icon: ICONS.find(i => !used.has(i)) || ICONS[0], required: !S.tasks.some(t => t.required), status: 'active' };
@@ -2825,6 +2956,10 @@ const App = {
       S.tasks.push(t); msg = `已新建任务「${t.name}」，共 ${ws.length} 个`;
     }
     if (useGrade && GRADE[p.g]) S.settings.grade = p.g;
+    // 分享码里带着校正过的读音：这台设备上还没校正过的词就用分享来的
+    const ip = cleanProns(p.p); let np = 0;
+    Object.entries(ip).forEach(([k, v]) => { if (!S.prons[k]) { S.prons[k] = v; np++; } });
+    if (np) msg += `，带来 ${np} 个校正过的读音`;
     save(); PENDING = null; view = 'parent'; PTAB = 'tasks'; PEDIT = null; render(); toast(msg);
   },
   cancelImport() { PENDING = null; view = 'parent'; PTAB = 'share'; PEDIT = null; render(); },
