@@ -1,5 +1,5 @@
 {
- "version": "kokoro82m-q8-v1",
+ "version": "kokoro82m-q8-v2",
  "lib": "kokoro.web.js",
  "ortMjs": "ort/ort-wasm-simd-threaded.jsep.mjs",
  "ortWasm": "ort/ort-wasm-simd-threaded.jsep.wasm",
@@ -19,7 +19,7 @@
  "files": [
   {
    "name": "kokoro.web.js",
-   "size": 2135106
+   "size": 2135122
   },
   {
    "name": "model/config.json",
@@ -71,7 +71,7 @@
   },
   {
    "name": "tts-worker.js",
-   "size": 7300
+   "size": 8396
   },
   {
    "name": "LICENSES.txt",

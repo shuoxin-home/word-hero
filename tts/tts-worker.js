@@ -1,7 +1,7 @@
 // 单词小勇士 · 标准发音引擎（Kokoro-82M，在后台线程里运行，不卡界面）
 // 所有文件都存在浏览器的 Cache 里（wordhero-tts-v1），下载一次以后断网也能用。
 const CACHE = 'wordhero-tts-v1';
-let BASE = '', MAN = null, TTS = null, cache = null, chain = Promise.resolve();
+let BASE = '', MAN = null, TTS = null, PHON = null, cache = null, chain = Promise.resolve();
 const post = (m, t) => self.postMessage(m, t || []);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function getCache() { return cache || (cache = await caches.open(CACHE)); }
@@ -103,6 +103,7 @@ async function load() {
   env.useCustomCache = true;
   env.customCache = localCache;
   TTS = await mod.KokoroTTS.from_pretrained('kokoro', { dtype: 'q8', device: 'wasm' });
+  PHON = mod.phonemize || null;
   const t1 = Date.now();
   await TTS.generate('Hello.', { voice: MAN.voices.us, speed: 1 }); // 预热一次，第一个词就不会特别慢
   return { loadMs: t1 - t0, warmMs: Date.now() - t1 };
@@ -130,7 +131,9 @@ async function init(m) {
   MAN = await manifest(m.download || m.update);
   if (!MAN) { post({ type: 'nodl' }); return; }
   let miss = await missing(MAN);
-  if (miss.length && !m.download) { post({ type: 'nodl', partial: miss.length < MAN.files.length }); return; }
+  // 引擎小更新（比如只换了几个脚本）：缺的文件不多时自动补下，不用家长再点下载
+  const missBytes = miss.reduce((s, f) => s + (f.size || 0), 0);
+  if (miss.length && !m.download && !(m.update && miss.length < MAN.files.length && missBytes < 8e6)) { post({ type: 'nodl', partial: miss.length < MAN.files.length }); return; }
   if (miss.length) {
     const total = MAN.files.reduce((s, f) => s + (f.size || 0), 0);
     const have = total - miss.reduce((s, f) => s + (f.size || 0), 0);
@@ -149,11 +152,24 @@ self.onmessage = e => {
   const m = e.data || {};
   if (m.type === 'init') {
     chain = chain.then(() => init(m)).catch(err => post({ type: 'error', msg: String(err && err.message || err) }));
+  } else if (m.type === 'phon') {
+    // 同一个词按美式、英式两套规则转成音标，给家长当候选
+    chain = chain.then(async () => {
+      if (!PHON) throw new Error('引擎还没准备好');
+      const out = {};
+      for (const l of ['a', 'b']) { try { out[l] = String(await PHON(m.text, l) || '').trim(); } catch (e) { out[l] = ''; } }
+      post({ type: 'phon', id: m.id, out });
+    }).catch(err => post({ type: 'phon', id: m.id, err: String(err && err.message || err) }));
   } else if (m.type === 'gen') {
     chain = chain.then(async () => {
       if (!TTS) throw new Error('引擎还没准备好');
       const t0 = Date.now();
-      const a = await TTS.generate(m.text, { voice: m.voice, speed: m.speed || 1 });
+      let a;
+      if (m.ipa) {
+        // 家长校正过的读音：直接按音标读，跳过"英文转音标"这一步
+        const { input_ids } = TTS.tokenizer(String(m.ipa), { truncation: true });
+        a = await TTS.generate_from_ids(input_ids, { voice: m.voice, speed: m.speed || 1 });
+      } else a = await TTS.generate(m.text, { voice: m.voice, speed: m.speed || 1 });
       const wav = toWav(a.audio, a.sampling_rate);
       post({ type: 'audio', id: m.id, wav, ms: Date.now() - t0 }, [wav]);
     }).catch(err => post({ type: 'audio', id: m.id, err: String(err && err.message || err) }));
