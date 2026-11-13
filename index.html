@@ -392,6 +392,14 @@ select.t{height:46px;background:#fff}
 .pr-l{flex:1;min-width:150px;display:flex;flex-direction:column;gap:2px}
 .pr-ipa{font-family:var(--en),'Segoe UI',sans-serif;font-size:16px;color:var(--ink2)}
 .pr-cur{font-weight:800;color:var(--green-d);font-size:14px;padding:0 6px}
+/* 谚语 */
+.prov-big{font-family:var(--en);font-size:34px;font-weight:700;line-height:1.35;margin:10px 4px 6px;overflow-wrap:anywhere}
+.lit{display:inline-block;font-size:16px;color:var(--ink2);background:var(--yellow-bg);border-radius:12px;padding:6px 14px;margin:0 0 12px}
+.opt-grid.wide{grid-template-columns:1fr 1fr!important}
+.opt.prov{font-size:19px;line-height:1.35;min-height:72px;padding:10px 14px;font-weight:700}
+.opt.zhopt{font-size:20px;line-height:1.35;min-height:72px;padding:10px 14px;font-weight:700}
+.prov-sent{font-size:26px}
+@media (max-width:620px){ .opt-grid.wide{grid-template-columns:1fr!important} .prov-big{font-size:26px} .prov-sent{font-size:21px} .opt.prov,.opt.zhopt{font-size:17px;min-height:56px} }
 </style>
 
 <div id="app"><div id="fx"></div><div id="view"></div></div>
@@ -596,6 +604,75 @@ monkey 猴子
 giraffe 长颈鹿
 rabbit 兔子
 zebra 斑马`;
+// 谚语：英文 中文 | 字面意思 图；[ ] 里是"关键词填空"和听写要写的词
+const PROV_LIST = `Actions speak [louder] than words. 行动胜于言辞 | 行动比话说得更响 🏃
+Practice makes [perfect]. 熟能生巧 | 练习造就完美 🎹
+Where there is a [will], there is a way. 有志者事竟成 | 有意愿的地方就有路 🛤️
+Better late than [never]. 迟做总比不做好 | 晚到总比不到好 ⏰
+Honesty is the [best] policy. 诚实为上策 | 诚实是最好的办法 🤝
+Don't judge a book by its [cover]. 不要以貌取人 | 别凭封面评判一本书 📖
+The [early] bird catches the worm. 早起的鸟儿有虫吃 | 早起的鸟儿捉到虫子 🐦
+No pains, no [gains]. 不劳无获 | 不付出就没有收获 💪
+A friend in need is a friend [indeed]. 患难见真情 | 你需要时出现的朋友，才是真朋友 🫂
+Easy come, easy [go]. 来得容易去得快 | 来得容易，去得也容易 💸
+Look [before] you leap. 三思而后行 | 跳之前先看一看 🐸
+Two [heads] are better than one. 三个臭皮匠，顶个诸葛亮 | 两个脑袋比一个好 🧠`;
+const PV_STOP = new Set('a an the is are am was were be to of in on at by for and or but no not you your it its they he she we i my me than there here this that do does don\'t let\'s'.split(' '));
+// 没写 [ ] 时自动挑关键词：最长的实词
+function autoKey(en) {
+  const ws = (String(en).match(/[A-Za-z][A-Za-z'\-]*/g) || []);
+  let best = '';
+  // 优先选不带撇号的实词（Don't、wasn't 这类不好拼），一样长时选后面的
+  ws.forEach(x => { if (PV_STOP.has(x.toLowerCase()) || /'/.test(x)) return; if (x.length >= best.length) best = x; });
+  if (!best) ws.forEach(x => { if (!PV_STOP.has(x.toLowerCase()) && x.length >= best.length) best = x; });
+  return best || ws[ws.length - 1] || '';
+}
+// 关键词在句子里的位置（整词匹配，不分大小写）
+function keyAt(en, key) {
+  if (!key) return -1;
+  const m = new RegExp("(^|[^A-Za-z'])(" + key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ")(?![A-Za-z'])", 'i').exec(en);
+  return m ? m.index + m[1].length : -1;
+}
+const pTokens = en => String(en).split(' ').map(x => x.replace(/[^A-Za-z'\-]/g, '')).filter(Boolean);
+function blankSent(w, fill) {
+  const i = keyAt(w.en, w.key); if (i < 0) return esc(w.en);
+  const k = w.en.substr(i, w.key.length);
+  const blank = fill ? `<span class="blank done">${esc(k)}</span>` : `<span class="blank" style="min-width:${Math.max(3, Math.round(k.length * 0.6))}em">&nbsp;</span>`;
+  return esc(w.en.slice(0, i)) + blank + esc(w.en.slice(i + k.length));
+}
+function parseProverbs(text) {
+  const out = [], seen = new Set();
+  String(text || '').split(/\r?\n/).forEach(line => {
+    let s = line.trim(); if (!s) return;
+    let emo = '', lit = '';
+    s = s.replace(/\p{Extended_Pictographic}[\uFE0F\u200D\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}]*/gu, m => { if (!emo) emo = m; return ' '; }).trim();
+    let head;
+    if (/^[|｜]/.test(s)) {            // 直接粘贴的表格：| 英文 | 中文 | 字面意思 |
+      const cells = s.replace(/^[|｜]|[|｜]\s*$/g, '').split(/[|｜]/).map(x => x.trim());
+      if (cells.every(c => !c || /^:?-{2,}:?$/.test(c))) return;
+      head = cells[0] + ' ' + (cells[1] || ''); lit = cells.slice(2).filter(Boolean).join('；');
+    } else {
+      const parts = s.split(/\s*[|｜]\s*/); head = parts.shift(); lit = parts.filter(Boolean).join('；');
+    }
+    head = head.replace(/[’‘`´]/g, "'").replace(/\t/g, ' ');
+    const cut = head.search(/[\u3400-\u9fff（]/);
+    let en = (cut >= 0 ? head.slice(0, cut) : head).replace(/\s+/g, ' ').trim();
+    const zh = cut >= 0 ? head.slice(cut).replace(/\s+/g, ' ').trim() : '';
+    if (!/[a-zA-Z]/.test(en) || pTokens(en.replace(/[\[\]]/g, '')).length < 2) return;   // 谚语至少两个词
+    let key = '';
+    const m = en.match(/\[([^\]]+)\]/);
+    if (m) { key = m[1].trim(); en = en.replace(/[\[\]]/g, ''); }
+    en = en.replace(/\s+([,.!?;:])/g, '$1').replace(/\s+/g, ' ').trim();
+    if (keyAt(en, key) < 0) key = autoKey(en);
+    const id = norm(en); if (!id || seen.has(id)) return; seen.add(id);
+    out.push({ id, en: en.slice(0, 160), zh: zh.slice(0, 80), lit: lit.replace(/\s+/g, ' ').slice(0, 100), key, emo, type: 'proverb', ex: [], exBad: [] });
+  });
+  return out;
+}
+const isPV = t => !!(t && t.kind === 'proverb');
+const parseKind = (kind, raw) => kind === 'proverb' ? parseProverbs(raw) : parseList(raw);
+const unitOf = t => isPV(t) ? '条' : '个';
+const newNoun = t => isPV(t) ? '条谚语' : '个新词';
 // 预置任务：新装的设备直接就有；已经在用的设备，下次打开时自动加上一次（家长删掉后不会再加回来）
 const SEEDS = [
   { id: 'tunit5', seed: 'unit5', name: 'Unit 5 单词与词组', icon: '📘', required: true, rawList: withEx(UNIT5_LIST, EX_U5), newPerDay: 0 },
@@ -604,7 +681,8 @@ const SEEDS = [
   { id: 'ttask2', seed: 'task2', after: 'tunit5', name: '任务二 单词背诵', icon: '📗', required: true, rawList: withEx(TASK2_LIST, EX_T2), newPerDay: 0 },
   { seed: 'unlimited1', setUnlimited: { tunit5: 6, ttask2: 4 } },
   // 已经在用的设备：给两个内置任务补上例句（不影响进度）
-  { seed: 'sent1', addEx: { tunit5: 'EX_U5', ttask2: 'EX_T2' } }
+  { seed: 'sent1', addEx: { tunit5: 'EX_U5', ttask2: 'EX_T2' } },
+  { id: 'tprov1', seed: 'proverb1', after: 'ttask2', name: '谚语学习', icon: '📜', kind: 'proverb', required: true, rawList: PROV_LIST, newPerDay: 4 }
 ];
 const SEED_IDS = ['nosample', ...SEEDS.map(x => x.seed)];
 
@@ -804,26 +882,31 @@ function load() { try { const v = localStorage.getItem(KEY); if (v) return JSON.
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { STORE_OK = false; MEM[KEY] = JSON.parse(JSON.stringify(S)); } }
 
 /* ---- 任务（每个任务有自己的词表和进度） ---- */
-const ICONS = ['📘', '📗', '📙', '📕', '🌍', '🦁', '🍎', '⚽', '🎵', '⭐', '🚀', '🏰'];
+const ICONS = ['📘', '📗', '📙', '📕', '📜', '🌍', '🦁', '🍎', '⚽', '🎵', '⭐', '🚀', '🏰'];
 const TCOL = ['var(--blue-l)', 'var(--green-bg)', 'var(--yellow-bg)', 'var(--orange-bg)', 'var(--purple-bg)'];
 const STATUS = { active: '进行中', paused: '已暂停', archived: '已归档' };
 const tcol = t => TCOL[Math.max(0, ICONS.indexOf(t.icon)) % TCOL.length];
 const genId = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const cleanEx = x => x && typeof x.en === 'string' && typeof x.b === 'string' && x.b && Number.isInteger(x.i) && x.en.substr(x.i, x.b.length) === x.b
   ? { en: x.en.slice(0, 200), zh: String(x.zh || '').slice(0, 200), b: x.b, i: x.i } : null;
-const cleanWord = w => ({ id: String(w.id || w.en || '').toLowerCase(), en: String(w.en || w.id || ''), zh: String(w.zh || ''),
-  emo: String(w.emo || '').replace(/[<>&"'`=\/\\]/g, ''), type: w.type === 'phrase' ? 'phrase' : 'word',
-  ex: (Array.isArray(w.ex) ? w.ex : []).map(cleanEx).filter(Boolean).slice(0, 6) });
+const cleanWord = w => {
+  const o = { id: String(w.id || w.en || '').toLowerCase(), en: String(w.en || w.id || ''), zh: String(w.zh || ''),
+    emo: String(w.emo || '').replace(/[<>&"'`=\/\\]/g, ''), type: w.type === 'proverb' ? 'proverb' : w.type === 'phrase' ? 'phrase' : 'word',
+    ex: (Array.isArray(w.ex) ? w.ex : []).map(cleanEx).filter(Boolean).slice(0, 6) };
+  if (o.type === 'proverb') { o.lit = String(w.lit || '').slice(0, 100); o.key = String(w.key || ''); if (keyAt(o.en, o.key) < 0) o.key = autoKey(o.en); o.ex = []; }
+  return o;
+};
 function newTask(o) {
   o = o || {};
-  const raw = typeof o.rawList === 'string' ? o.rawList : '';
+  const raw = typeof o.rawList === 'string' ? o.rawList : '', kind = o.kind === 'proverb' ? 'proverb' : 'word';
   return {
+    kind,
     id: /^t[a-z0-9]+$/.test(o.id || '') ? o.id : genId(),
     name: String(o.name || '我的任务').slice(0, 20),
     icon: ICONS.includes(o.icon) ? o.icon : '📘',
     required: o.required !== false,
     rawList: raw,
-    words: Array.isArray(o.words) ? o.words.map(cleanWord).filter(w => w.en) : parseList(raw),
+    words: Array.isArray(o.words) ? o.words.map(cleanWord).filter(w => w.en) : parseKind(kind, raw),
     newPerDay: o.newPerDay == null || o.newPerDay === '' ? 6 : (Math.round(Number(o.newPerDay)) === 0 ? 0 : (Math.min(12, Math.max(1, Math.round(Number(o.newPerDay)))) || 6)),
     deadline: /^\d{4}-\d{2}-\d{2}$/.test(o.deadline || '') ? o.deadline : '',
     status: STATUS[o.status] ? o.status : 'active',
@@ -938,7 +1021,7 @@ const pickNew = t => {
   const n = t.newPerDay ? Math.max(0, t.newPerDay - tDaily(t).newDone) : grpSize();   // 不限：每次一组，学完可以接着学
   return unlearned(t).slice(0, n).map(w => keyOf(t.id, w.id));
 };
-const npdText = t => t.newPerDay ? `每天 ${t.newPerDay} 个` : '每天不限';
+const npdText = t => t.newPerDay ? `每天 ${t.newPerDay} ${t.kind === 'proverb' ? '条' : '个'}` : '每天不限';
 const isDue = p => !!(p && p.box >= 1 && p.box <= 5 && p.due && p.due <= today());
 const dueOf = t => t.status === 'paused' ? [] : t.words.filter(w => isDue(t.progress[w.id])).map(w => keyOf(t.id, w.id));
 // 首页显示的任务：进行中的，加上已归档但还有词要复习的
@@ -1333,6 +1416,9 @@ function confetti() {
 let view = 'home', SESS = null, GATE = null, PTAB = 'tasks', resetArm = false;
 let PEDIT = null, EDIT = null, delArm = false, ttsArm = false, PIC = null, STASK = '', RSEL = '', IMP = { mode: 'new', name: '', tgt: '' };
 const mk = (type, k) => ({ type, id: k, retry: 0 });
+// 谚语的题型：复习时盒子低的排词块，盒子高了改成拼关键词
+const PV_STEPS = ['plisten', 'ppick', 'ptiles', 'pkey'];
+const recallOf = (k, g) => W(k).type === 'proverb' ? (getP(k).box >= 3 ? 'pkey' : 'ptiles') : g.recall;
 const curTask = () => SESS.tasks[SESS.i];
 
 function prepare(t) {
@@ -1343,7 +1429,7 @@ function prepare(t) {
     t.ex = exs.length ? exs[Math.floor(Math.random() * exs.length)] : null;
     if (!t.ex) t.type = 'pick';     // 家长删掉了例句：改成看图选词
   }
-  if (t.type === 'listen' || t.type === 'pick' || t.type === 'sent') {
+  if (t.type === 'listen' || t.type === 'pick' || t.type === 'sent' || t.type === 'plisten' || t.type === 'ppick') {
     // 干扰项优先取同一个任务里的词，不够再从其他任务里取；英文相同或图片相同的不用
     const tid = splitKey(t.id)[0], cand = [], seen = new Set([w.en.toLowerCase()]), emos = new Set(w.emo ? [w.emo] : []);
     const own = TK(tid) ? shuffle(keysOf(TK(tid))) : [], rest = shuffle(S.tasks.filter(x => x.id !== tid).flatMap(keysOf));
@@ -1354,12 +1440,12 @@ function prepare(t) {
     if (!cand.length) rest.forEach(push);
     t.options = shuffle([t.id, ...cand.slice(0, g.opts - 1)]);
     t.chosen = null;
-  } else if (t.type === 'tiles') {
-    const parts = w.type === 'phrase' ? w.en.split(' ') : w.en.replace(/\s/g, '').split('');
+  } else if (t.type === 'tiles' || t.type === 'ptiles') {
+    const parts = w.type === 'proverb' ? pTokens(w.en) : w.type === 'phrase' ? w.en.split(' ') : w.en.replace(/\s/g, '').split('');
     let p = shuffle(parts), k = 0;
     while (parts.length > 1 && p.join('|') === parts.join('|') && k++ < 8) p = shuffle(parts);
     t.pool = p; t.ans = [];
-  } else if (t.type === 'type') { t.val = ''; t.hinted = false; }
+  } else if (t.type === 'type' || t.type === 'pkey') { t.val = ''; t.hinted = false; }
   else if (t.type === 'speak') { const m = pickSpMode(); t.sp = { state: 'idle', mode: m, started: false, auto: false, playing: '', session: 0, stopReq: false, tries: 0, best: 0, stars: 0, heard: '', interim: '', audio: null, notice: m === 'none' ? NOTE_MIC : '' }; }
 }
 
@@ -1411,19 +1497,19 @@ function start(mode, tid) {
   if (mode === 'review') {
     task = tid ? TK(tid) : null;
     reviewIds = shuffle(task ? dueOf(task) : dueReviews()).slice(0, REVIEW_BATCH);   // 一次最多复习 20 个，多的分几次做
-    reviewIds.forEach(k => items.push(mk(g.recall, k)));
+    reviewIds.forEach(k => items.push(mk(recallOf(k, g), k)));
   } else if (mode === 'task') {
     task = TK(tid); if (!task) return;
     newIds = pickNew(task);
     newIds.forEach(k => items.push(mk('card', k)));
-    const steps = g.steps.slice();
-    if (S.settings.sentOn !== false) steps.splice(steps.indexOf('pick') + 1, 0, 'sent');   // 看图选词之后：句子填空
+    const steps = isPV(task) ? PV_STEPS.slice() : g.steps.slice();
+    if (!isPV(task) && S.settings.sentOn !== false) steps.splice(steps.indexOf('pick') + 1, 0, 'sent');   // 看图选词之后：句子填空
     steps.forEach(st => shuffle(newIds).forEach(k => { if (st === 'sent' && !(W(k).ex || []).length) return; items.push(mk(st, k)); }));
   } else {
     reviewIds = wrongList();
     reviewIds.forEach(k => items.push(mk('card', k)));
-    shuffle(reviewIds).forEach(k => items.push(mk('pick', k)));
-    shuffle(reviewIds).forEach(k => items.push(mk(g.recall, k)));
+    shuffle(reviewIds).forEach(k => items.push(mk(W(k).type === 'proverb' ? 'ppick' : 'pick', k)));
+    shuffle(reviewIds).forEach(k => items.push(mk(recallOf(k, g), k)));
   }
   if (!items.length) { toast('现在没有要练的单词啦'); return; }
   SESS = { mode, tid: task ? task.id : null, tasks: items, i: 0, results: {}, stars: 0, newIds, reviewIds, fb: null, tok: 0 };
@@ -1864,7 +1950,7 @@ async function readCode(code) {
   if (code[0] === 'z') { if (!window.DecompressionStream) throw new Error('old'); try { bytes = await pipeBytes(bytes, DecompressionStream); } catch (e) { throw new Error(e instanceof TypeError ? 'old' : 'bad'); } }
   else if (code[0] !== 'u') throw new Error('bad');
   const p = JSON.parse(new TextDecoder().decode(bytes));
-  if (!p || typeof p.l !== 'string' || !parseList(p.l).length) throw new Error('bad');
+  if (!p || typeof p.l !== 'string' || !parseKind(p.k === 'p' ? 'proverb' : 'word', p.l).length) throw new Error('bad');
   return p;
 }
 const extractCode = text => { const m = String(text || '').match(/(?:#w=|WH1:)([uz][A-Za-z0-9_-]{8,})/); return m ? m[1] : null; };
@@ -1872,12 +1958,12 @@ const extractCode = text => { const m = String(text || '').match(/(?:#w=|WH1:)([
 let SHARE = null, PENDING = null, SCAN = null, RESTORE = null;
 const shareTask = () => TK(STASK) || S.tasks[0];
 const sharePron = t => { const o = {}; t.words.forEach(w => { const p = pronOf(w.en); if (p) o[pronKey(w.en)] = p; }); return o; };
-const shareKey = t => [t.id, t.name, t.icon, t.required, t.rawList, t.newPerDay, t.deadline, S.settings.grade, JSON.stringify(sharePron(t))].join('|');
+const shareKey = t => [t.id, t.kind, t.name, t.icon, t.required, t.rawList, t.newPerDay, t.deadline, S.settings.grade, JSON.stringify(sharePron(t))].join('|');
 async function buildShare() {
   const t = shareTask(); if (!t) return;
   const key = shareKey(t);
   const pr = sharePron(t);
-  const code = await makeCode({ v: 2, n: t.name, i: t.icon, r: t.required ? 1 : 0, l: t.rawList, d: t.newPerDay, dl: t.deadline || undefined, g: S.settings.grade, p: Object.keys(pr).length ? pr : undefined });
+  const code = await makeCode({ v: 2, n: t.name, i: t.icon, r: t.required ? 1 : 0, l: t.rawList, d: t.newPerDay, dl: t.deadline || undefined, g: S.settings.grade, p: Object.keys(pr).length ? pr : undefined, k: isPV(t) ? 'p' : undefined });
   const cur = shareTask(); if (!cur || shareKey(cur) !== key) return;
   const isLink = /^https?:$/.test(location.protocol);
   const link = isLink ? location.origin + location.pathname + '#w=' + code : 'WH1:' + code;
@@ -1893,7 +1979,7 @@ async function handleCode(code, fromLink) {
   try {
     const p = await readCode(code);
     PENDING = { ...p, code, fromLink: !!fromLink };
-    const nm = String(p.n || '新任务').slice(0, 20), same = S.tasks.find(t => t.name === nm);
+    const nm = String(p.n || '新任务').slice(0, 20), pk = p.k === 'p' ? 'proverb' : 'word', same = S.tasks.find(t => t.name === nm && (t.kind || 'word') === pk);
     IMP = same ? { mode: 'merge', name: nm, tgt: same.id } : { mode: 'new', name: nm, tgt: (S.tasks[0] || {}).id || '' };
     return true;
   } catch (e) { toast(e.message === 'old' ? '这台设备的浏览器版本太旧，读不了这个分享码' : '分享码读不出来，请检查是否复制完整'); return false; }
@@ -1929,13 +2015,13 @@ function vTaskCard(t) {
   const act = rvl != null ? `<button class="btn sm orange" ${go}>继续复习（${rvl ? '还剩 ' + rvl + ' 题' : '马上完成'}）→</button>`
     : rl != null ? `<button class="btn sm orange" ${go}>继续学（${rl ? '还剩 ' + rl + ' 题' : '马上完成'}）→</button>`
     : due.length ? `<button class="btn sm orange" ${go}>先复习 ${Math.min(due.length, REVIEW_BATCH)} 个 →</button>`
-    : nw.length ? `<button class="btn sm green" ${go}>${!t.newPerDay && td ? '再学' : '学'} ${nw.length} 个新词 →</button>`
+    : nw.length ? `<button class="btn sm green" ${go}>${!t.newPerDay && td ? '再学' : '学'} ${nw.length} ${newNoun(t)} →</button>`
     : !left ? (dictDue(t) ? '' : '<span class="badge done">🏆 全部学完</span>') : '<span class="badge done">✅ 今天完成</span>';
   const info = [`已学 ${learned}/${tot}`];
   if (best) info.push(`<span class="badge dict">听写最好 ${best.c}/${best.n}${best.c === best.n ? ' 💯' : ''}</span>`);
-  else if (dictDue(t)) info.push('<b style="color:var(--purple)">单词都学完了，该听写啦！</b>');
+  else if (dictDue(t)) info.push(`<b style="color:var(--purple)">${isPV(t) ? '谚语' : '单词'}都学完了，该听写啦！</b>`);
   if (due.length) info.push(`<b style="color:var(--orange-d)">要复习 ${due.length} 个</b>${due.length > REVIEW_BATCH ? `（每次 ${REVIEW_BATCH} 个）` : ''}`);
-  if (td) info.push(`今天学了 ${td} 个`);
+  if (td) info.push(`今天学了 ${td} ${unitOf(t)}`);
   if (dl) info.push(dl);
   return `<div class="tcard"><div class="ticon" style="background:${tcol(t)}">${t.icon}</div>
     <div class="grow"><div class="tname">${esc(t.name)} <span class="badge ${t.required ? 'req' : 'opt'}">${t.required ? '必做' : '选做'}</span>${t.status === 'archived' ? ' <span class="badge new">已归档·只复习</span>' : ''}</div>
@@ -1983,7 +2069,44 @@ function vSession() {
   const w = W(t.id), fb = SESS.fb, lock = !!fb;
   const pct = Math.round(SESS.i / SESS.tasks.length * 100);
   let body = '';
-  if (t.type === 'card') {
+  if (t.type === 'card' && w.type === 'proverb') {
+    body = `<div class="card center">
+      <span class="tag">新谚语</span>
+      ${bigPic(w)}
+      <div class="prov-big">${esc(w.en)}</div>
+      <div class="zh">${esc(w.zh)}</div>
+      ${w.lit ? `<div class="lit">字面意思：${esc(w.lit)}</div>` : ''}
+      <div><button class="speak" onclick="App.say()" aria-label="再听一遍">🔊</button></div>
+      <div class="hint">听一听，大声跟着读 2 遍</div>
+      <button class="btn big" onclick="App.next()">我记住了 →</button></div>`;
+  } else if (t.type === 'plisten' || t.type === 'ppick') {
+    const isL = t.type === 'plisten';
+    const cls = i => t.chosen == null ? '' : (t.options[i] === t.id ? 'right' : (i === t.chosen ? 'wrong' : ''));
+    body = `<div class="card center">
+      ${isL ? `<div class="q">👂 听一听，选出这句谚语的意思</div><button class="speak xl" onclick="App.say()" aria-label="播放">🔊</button>`
+            : `<div class="q">👀 看中文，选出对的英文谚语</div>${bigPic(w)}<div class="zh">${esc(w.zh)}</div>`}
+      <div class="opt-grid wide">${t.options.map((oid, i) => { const o = W(oid);
+        return `<button class="opt ${isL ? 'zhopt' : 'en prov'} ${cls(i)}" ${lock ? 'disabled' : ''} onclick="App.pick(${i})">${isL ? esc(o.zh || o.en) : esc(o.en)}</button>`; }).join('')}</div>
+      ${vFb(w)}</div>`;
+  } else if (t.type === 'ptiles') {
+    body = `<div class="card center">
+      <div class="q">🧩 把单词排成这句谚语</div>
+      ${bigPic(w)}<div class="zh">${esc(w.zh)} <button class="speak sm" onclick="App.say()">🔊</button></div>
+      <div class="slots">${t.ans.length ? t.ans.map((pi, k) => `<button class="tile placed" ${lock ? 'disabled' : ''} onclick="App.untile(${k})">${esc(t.pool[pi])}</button>`).join('') : '<span class="muted">按顺序点下面的单词，放到这里</span>'}</div>
+      <div class="pool">${t.pool.map((x, pi) => `<button class="tile ${t.ans.includes(pi) ? 'used' : ''}" ${lock ? 'disabled' : ''} onclick="App.tile(${pi})">${esc(x)}</button>`).join('')}</div>
+      ${vFb(w)}</div>`;
+  } else if (t.type === 'pkey') {
+    body = `<div class="card center">
+      <div class="q">⌨️ 听一听，写出空格里缺的词</div>
+      <div class="zh">${esc(w.zh)} <button class="speak sm" onclick="App.say()">🔊</button></div>
+      <div class="sent prov-sent">${blankSent(w, !!fb)}</div>
+      <div class="muted small" style="margin:-4px 0 10px">共 ${w.key.length} 个字母</div>
+      ${useKb() ? `<div id="tvw" class="type-in kbshow">${kbDisp(t.val, lock)}</div>${lock ? '' : vKb({ en: w.key })}`
+        : `<input id="ti" class="type-in" lang="en" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" ${lock ? 'disabled' : ''} value="${esc(t.val || '')}"
+        oninput="App.tv(this.value)" onkeydown="if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229)App.submit()">`}
+      ${lock ? '' : `<div class="row2"><button class="btn ghost" onclick="App.hint()">💡 提示一个字母</button><button class="btn" onclick="App.submit()">写好了 ✓</button></div>`}
+      ${vFb(w)}</div>`;
+  } else if (t.type === 'card') {
     body = `<div class="card center">
       <span class="tag">${w.type === 'phrase' ? '新词组' : '新单词'}</span>
       ${bigPic(w)}
@@ -2072,7 +2195,7 @@ function vDone() {
   const nextBtn = !nxt ? ''
     : nxt !== tk ? `<button class="btn ghost" onclick="App.start('task','${nxt.id}')">休息好了，做 ${nxt.icon} ${esc(nxt.name)}</button>`
     : dueOf(nxt).length ? `<button class="btn ghost" onclick="App.start('task','${nxt.id}')">休息好了，接着复习 ${Math.min(dueOf(nxt).length, REVIEW_BATCH)} 个</button>`
-    : SESS.mode === 'review' ? `<button class="btn ghost" onclick="App.start('task','${nxt.id}')">休息好了，学 ${pickNew(nxt).length} 个新词</button>`
+    : SESS.mode === 'review' ? `<button class="btn ghost" onclick="App.start('task','${nxt.id}')">休息好了，学 ${pickNew(nxt).length} ${newNoun(nxt)}</button>`
     : `<button class="btn ghost" onclick="App.start('task','${nxt.id}')">休息好了，再学一组（还剩 ${unlearned(nxt).length} 个）</button>`;
   return `<div class="card center">
     <div class="pic">🎉</div>
@@ -2136,6 +2259,12 @@ const DMODE = {
   zh: { name: '🀄 看中文写词', desc: '看中文意思，用键盘写出英文。不读音，更难一些。' },
   paper: { name: '📄 写在纸上', desc: '应用一个一个读，孩子写在本子上；全部读完后，家长对答案，点出写错的词，再提交成绩。' }
 };
+// 谚语任务：听整句写关键词，或者在纸上默写整句
+const PV_DMODE = {
+  audio: { name: '🔊 听音写关键词', desc: '听整句谚语，写出空格里缺的那个词。可以多听几遍，没有提示，全部写完再看成绩。' },
+  paper: { name: '📄 写在纸上', desc: '应用一句一句读，孩子在本子上默写整句；全部读完后，家长对答案，点出写错的，再提交成绩。' }
+};
+const dModes = t => isPV(t) ? PV_DMODE : DMODE;
 const DREWARD = { done: 5, per: 1, good: 10, perfect: 20, record: 5, minBonus: 5, fullPerDay: 2, randN: 20 };
 let DICT = null, DSEL = null;
 const dictKey = tid => 'dict:' + tid;
@@ -2167,12 +2296,12 @@ function vDictStart() {
   const b = dictBest(t.id), left = unlearned(t).length, used = dictToday(t.id);
   return `<div class="sess-top"><button class="x" onclick="App.home()">←</button><h2 style="margin:0">📝 听写 · ${t.icon} ${esc(t.name)}</h2></div>
   <div class="card">
-    ${allLearned(t) ? `<div class="all-done" style="background:var(--purple-bg)">🎉 这个任务的 ${t.words.length} 个词都学完啦，来检验一下吧！</div>`
+    ${allLearned(t) ? `<div class="all-done" style="background:var(--purple-bg)">🎉 这个任务的 ${t.words.length} ${unitOf(t)}${isPV(t) ? '谚语' : '词'}都学完啦，来检验一下吧！</div>`
       : `<div class="notice">还有 ${left} 个词没学。现在也可以先听写${sc.some(x => x.id === 'learned') ? '已经学过的词' : '，没学过的词写不出来也没关系'}；全部学完后再来一次完整的听写。</div>`}
     <div class="muted small">${b ? `最好成绩：${b.c} / ${b.n}（${pctOf(b.c, b.n)}%，${b.date}）` : '还没有听写过'}${used ? ` · 今天已经听写 ${used} 次` : ''}</div>
     <label class="f">听写方式</label>
-    <div class="seg">${Object.entries(DMODE).map(([k, m]) => `<button class="${DSEL.mode === k ? 'on' : ''}" onclick="App.dictMode('${k}')">${m.name}</button>`).join('')}</div>
-    <div class="muted small" style="margin-top:6px">${DMODE[DSEL.mode].desc}</div>
+    <div class="seg">${Object.entries(dModes(t)).map(([k, m]) => `<button class="${DSEL.mode === k ? 'on' : ''}" onclick="App.dictMode('${k}')">${m.name}</button>`).join('')}</div>
+    <div class="muted small" style="margin-top:6px">${(dModes(t)[DSEL.mode] || dModes(t).audio).desc}</div>
     <label class="f">听写范围</label>
     <div class="seg">${sc.map(x => `<button class="${x === cur ? 'on' : ''}" onclick="App.dictScope('${x.id}')">${x.name}</button>`).join('')}</div>
     <div class="rw-box"><b>🎁 听写奖励</b><br>
@@ -2193,7 +2322,7 @@ function vDict() {
     return top + `<div class="card center">
       <span class="dict-tag">📄 写在纸上 · ${t ? esc(t.name) : ''}</span>
       <div class="d-paper">${DICT.i + 1}</div>
-      <div class="hint">请在本子上写下第 <b>${DICT.i + 1}</b> 个${w.type === 'phrase' ? '词组' : '单词'}</div>
+      <div class="hint">请在本子上写下第 <b>${DICT.i + 1}</b> ${w.type === 'proverb' ? '句谚语（整句）' : w.type === 'phrase' ? '个词组' : '个单词'}</div>
       <button class="speak xl" onclick="App.dictSay()" aria-label="再读一遍">🔊</button>
       <div class="btns" style="margin-top:14px">${DICT.i > 0 ? '<button class="btn ghost" onclick="App.dictPrev()">← 上一个</button>' : ''}<button class="btn dict" onclick="App.dictNext()">${DICT.i + 1 < n ? '下一个 →' : '写完了，对答案 →'}</button></div>
     </div>`;
@@ -2201,7 +2330,9 @@ function vDict() {
   const v = DICT.cur || '';
   return top + `<div class="card center">
     <span class="dict-tag">📝 听写 · ${t ? esc(t.name) : ''}</span>
-    ${DICT.mode === 'audio'
+    ${w.type === 'proverb'
+      ? `<div class="q" style="margin-top:10px">🔊 听一听，写出空格里缺的词</div><button class="speak xl" onclick="App.dictSay()" aria-label="再听一遍">🔊</button><div class="sent prov-sent">${blankSent(w)}</div>`
+      : DICT.mode === 'audio'
       ? `<div class="q" style="margin-top:10px">🔊 听一听，写出这个${w.type === 'phrase' ? '词组' : '单词'}</div><button class="speak xl" onclick="App.dictSay()" aria-label="再听一遍">🔊</button>`
       : `<div class="q" style="margin-top:10px">🀄 写出这个${w.type === 'phrase' ? '词组' : '单词'}的英文</div><div class="d-zh">${esc(w.zh || '（没有中文）')}</div>`}
     ${useKb() ? `<div id="tvw" class="type-in kbshow">${kbDisp(v, false)}</div>${vKb({ en: "'-" })}`
@@ -2246,7 +2377,7 @@ function vDictResult() {
   </div>
   ${R.wrong.length ? `<div class="card"><h3>✏️ 写错的 ${R.wrong.length} 个</h3>
     ${R.wrong.map(x => { const w = W(keyOf(R.tid, x.id)); return `<div class="dw-item"><span style="font-size:28px">${w.emo || '🔤'}</span>
-      <div class="grow"><div class="w">${esc(w.en)}</div><div class="muted">${esc(w.zh)}${x.ans ? ` · 你写的：<span class="yours">${esc(x.ans)}</span>` : x.paper ? '' : ' · 没写'}</div></div>
+      <div class="grow"><div class="w">${esc(w.en)}</div><div class="muted">${esc(w.zh)}${w.type === 'proverb' && !x.paper ? ` · 要写：<b>${esc(w.key)}</b>` : ''}${x.ans ? ` · 你写的：<span class="yours">${esc(x.ans)}</span>` : x.paper ? '' : ' · 没写'}</div></div>
       <button class="speak sm" onclick="App.dictSayWord('${esc(x.id).replace(/'/g, "\\'")}')">🔊</button></div>`; }).join('')}
     <div class="muted small" style="margin-top:8px">写错的词已经放进错词本，明天会安排复习。写对的词如果原来在错词本里，已经移出来了。</div></div>` : ''}
   ${R.caseNote.length ? `<div class="card"><h3>🔠 注意大写</h3><div class="muted small">这些词算你写对了，但是在句子和考试里首字母要大写：</div>
@@ -2257,8 +2388,9 @@ function vDictResult() {
 // 判分：大小写不算错，但要提醒；多余的空格不算错
 function dictJudge(w, ans) {
   const a = String(ans || '').trim().replace(/\s+/g, ' ');
-  const ok = !!a && norm(a) === norm(w.en);
-  const caseWarn = ok && /[A-Z]/.test(w.en) && a !== w.en.replace(/\s+/g, ' ');
+  const tg = w.type === 'proverb' ? w.key : w.en;
+  const ok = !!a && norm(a) === norm(tg);
+  const caseWarn = ok && w.type !== 'proverb' && /[A-Z]/.test(tg) && a !== tg.replace(/\s+/g, ' ');
   return { ok, caseWarn };
 }
 
@@ -2334,9 +2466,10 @@ function vGate() {
 }
 
 function vImport() {
-  const p = PENDING, ws = parseList(p.l), gl = GRADE[p.g] ? GRADE[p.g].label : '';
-  const mode = IMP.mode === 'merge' && S.tasks.length ? 'merge' : 'new';
-  const tgt = mode === 'merge' ? (TK(IMP.tgt) || S.tasks[0]) : null;
+  const pk = PENDING.k === 'p' ? 'proverb' : 'word', mt = S.tasks.filter(t => (t.kind || 'word') === pk);
+  const p = PENDING, ws = parseKind(pk, p.l), gl = GRADE[p.g] ? GRADE[p.g].label : '';
+  const mode = IMP.mode === 'merge' && mt.length ? 'merge' : 'new';
+  const tgt = mode === 'merge' ? (mt.find(t => t.id === IMP.tgt) || mt[0]) : null;
   const fresh = tgt ? ws.filter(w => !tgt.words.some(x => x.id === w.id)).length : ws.length;
   const icon = ICONS.includes(p.i) ? p.i : '📗';
   return `<div class="sess-top"><button class="x" onclick="App.cancelImport()">←</button><h2 style="margin:0">📥 导入词表</h2></div>
@@ -2345,15 +2478,15 @@ function vImport() {
       : '请确认这个页面是用孩子平时用的那个浏览器（比如 Chrome）打开的。如果是微信等其他应用里的浏览器打开的，导入的词表会存到别的地方，桌面上的单词小勇士里看不到。不确定的话，复制分享码，到桌面应用里粘贴最稳。'}</div><button class="btn ghost sm" onclick="App.copyPending()">📋 复制分享码</button></div>` : ''}
   <div class="card">
     <h3>${icon} ${esc(p.n || '未命名词表')}</h3>
-    <div class="muted small">共 ${ws.length} 个${p.r != null ? ' · ' + (p.r ? '必做' : '选做') : ''}${p.d != null ? (Number(p.d) ? ' · 每天 ' + esc(p.d) + ' 个' : ' · 每天不限') : ''}${p.dl ? ' · 截止 ' + esc(p.dl) : ''}</div>
+    <div class="muted small">${pk === 'proverb' ? '📜 谚语 · ' : ''}共 ${ws.length} ${pk === 'proverb' ? '条' : '个'}${p.r != null ? ' · ' + (p.r ? '必做' : '选做') : ''}${p.d != null ? (Number(p.d) ? ' · 每天 ' + esc(p.d) + ' 个' : ' · 每天不限') : ''}${p.dl ? ' · 截止 ' + esc(p.dl) : ''}</div>
     <div class="tw"><table style="margin-top:10px"><tr><th>图</th><th>英文</th><th>中文</th></tr>
     ${ws.slice(0, 12).map(w => `<tr><td style="font-size:22px">${w.emo || '🔤'}</td><td class="en">${esc(w.en)}</td><td>${esc(w.zh)}</td></tr>`).join('')}</table></div>
     ${ws.length > 12 ? `<div class="muted small" style="margin-top:6px">……还有 ${ws.length - 12} 个</div>` : ''}
     <label class="f">导入方式</label>
-    <div class="seg"><button class="${mode === 'new' ? 'on' : ''}" onclick="App.impMode('new')">新建为一个任务</button>${S.tasks.length ? `<button class="${mode === 'merge' ? 'on' : ''}" onclick="App.impMode('merge')">合并到已有任务</button>` : ''}</div>
+    <div class="seg"><button class="${mode === 'new' ? 'on' : ''}" onclick="App.impMode('new')">新建为一个任务</button>${mt.length ? `<button class="${mode === 'merge' ? 'on' : ''}" onclick="App.impMode('merge')">合并到已有任务</button>` : ''}</div>
     ${mode === 'new'
       ? `<label class="f">任务名称</label><input id="imp_name" class="t" maxlength="20" value="${esc(IMP.name)}" oninput="App.impName(this.value)">`
-      : `<label class="f">合并到</label><select id="imp_tgt" class="t" onchange="App.impTgt(this.value)">${S.tasks.map(t => `<option value="${t.id}" ${t === tgt ? 'selected' : ''}>${t.icon} ${esc(t.name)}${t.status !== 'active' ? '（' + STATUS[t.status] + '）' : ''}</option>`).join('')}</select>
+      : `<label class="f">合并到</label><select id="imp_tgt" class="t" onchange="App.impTgt(this.value)">${mt.map(t => `<option value="${t.id}" ${t === tgt ? 'selected' : ''}>${t.icon} ${esc(t.name)}${t.status !== 'active' ? '（' + STATUS[t.status] + '）' : ''}</option>`).join('')}</select>
          <div class="muted small" style="margin-top:6px">其中 ${fresh} 个是这个任务里没有的，重复的词会自动跳过。</div>`}
     ${gl ? `<label class="check"><input type="checkbox" id="imp_set"> 同时把孩子的年级改成：${gl}</label>` : ''}
     <div style="margin-top:14px"><button class="btn green" onclick="App.applyImport()">确认导入</button></div>
@@ -2411,7 +2544,7 @@ function vTaskList() {
     const tot = t.words.length, learned = tot - unlearned(t).length;
     return `<div class="trow"><div class="ticon sm" style="background:${tcol(t)}">${t.icon}</div>
       <div class="grow"><div class="tname">${esc(t.name)} <span class="badge ${t.required ? 'req' : 'opt'}">${t.required ? '必做' : '选做'}</span>${t.status !== 'active' ? ` <span class="badge new">${STATUS[t.status]}</span>` : ''}</div>
-        <div class="muted small">${tot} 个 · 已学 ${learned} · 已掌握 ${mastered(t)} · ${npdText(t)}${t.deadline ? ' · ' + dlText(t.deadline) : ''}</div></div>
+        <div class="muted small">${isPV(t) ? '📜 谚语 · ' : ''}${tot} ${unitOf(t)} · 已学 ${learned} · 已掌握 ${mastered(t)} · ${npdText(t)}${t.deadline ? ' · ' + dlText(t.deadline) : ''}</div></div>
       <div class="tops">
         <button class="ib" onclick="App.tmove('${t.id}',-1)" ${i === 0 ? 'disabled' : ''} aria-label="上移">↑</button>
         <button class="ib" onclick="App.tmove('${t.id}',1)" ${i === arr.length - 1 ? 'disabled' : ''} aria-label="下移">↓</button>
@@ -2442,13 +2575,19 @@ function vEditor() {
     <label class="f">类型</label>
     <div class="seg"><button class="${E.required ? 'on' : ''}" onclick="App.edReq(true,this)">必做</button><button class="${E.required ? '' : 'on'}" onclick="App.edReq(false,this)">选做</button></div>
     <div class="muted small" style="margin-top:6px">每天的连续打卡只看复习和必做任务有没有完成，选做任务做不做都不影响。</div>
-    <label class="f">单词 / 词组（每行一个）</label>
-    <textarea id="e_raw" class="t" rows="9" placeholder="apple 苹果&#10;play football 踢足球 ⚽" onblur="App.edPlan()">${esc(t ? t.rawList : '')}</textarea>
+    <label class="f">学什么</label>
+    ${t ? `<div class="muted">${E.kind === 'proverb' ? '📜 谚语 / 句子' : '🔤 单词 / 词组'}<span class="small">（建好以后不能改）</span></div>`
+      : `<div class="seg"><button class="${E.kind !== 'proverb' ? 'on' : ''}" onclick="App.edKind('word',this)">🔤 单词 / 词组</button><button class="${E.kind === 'proverb' ? 'on' : ''}" onclick="App.edKind('proverb',this)">📜 谚语 / 句子</button></div>`}
+    <label class="f" id="e_rawl">${E.kind === 'proverb' ? '谚语（每行一条）' : '单词 / 词组（每行一个）'}</label>
+    <textarea id="e_raw" class="t" rows="9" placeholder="${E.kind === 'proverb' ? 'Practice makes [perfect]. 熟能生巧 | 练习造就完美 🎹' : 'apple 苹果&#10;play football 踢足球 ⚽'}" onblur="App.edPlan()">${esc(t ? t.rawList : '')}</textarea>
+    <div id="e_pvhelp" class="muted small" style="margin-top:6px;${E.kind === 'proverb' ? '' : 'display:none'}">${PV_HELP}</div>
+    <div id="e_wdhelp" style="${E.kind === 'proverb' ? 'display:none' : ''}">
     <div class="muted small" style="margin-top:6px">格式：<code>英文 中文</code>，末尾可以加一个 emoji 当图片，比如 <code>play football 踢足球 ⚽</code>。常见词会自动配图；可以直接从 Excel 复制两列粘贴进来。<br>
       <b>例句（用来出"句子填空"题，可以不写）：</b>在后面用 <code>|</code> 隔开写例句，例句后面可以跟中文翻译，多句再用 <code>|</code> 隔开，比如 <code>apple 苹果 | I eat an apple every day. 我每天吃一个苹果。</code>。例句里要包含这个词；词形有变化时，用 <code>[ ]</code> 把要挖空的部分括起来，比如 <code>be good for 对……有好处 | Vegetables [are good for] us.</code></div>
     <div id="e_ex" class="muted small" style="margin-top:6px">${exInfo(t ? t.words : [])}</div>
     <div class="btns" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost sm" onclick="App.picScan()">🖼️ 一键配图</button><span class="muted small" style="align-self:center">按英文和中文意思自动找图，有拿不准的让你选</span></div>
     <div id="e_pic">${picPanel()}</div>
+    </div>
     <label class="f">每天新学 <b id="e_npdv">${unl ? '不限' : npd + ' 个'}</b></label>
     <label class="check" style="margin-top:0"><input type="checkbox" id="e_unl" ${unl ? 'checked' : ''} onchange="App.edPlan()"> 不限制每天学几个（每组 ${grp} 个，学完一组可以接着学，当天学完一组就算完成）</label>
     <input id="e_npd" type="range" min="1" max="12" value="${unl ? 6 : npd}" style="width:100%;${unl ? 'opacity:.35' : ''}" ${unl ? 'disabled' : ''} oninput="App.edPlan()">
@@ -2504,6 +2643,10 @@ async function pronCands(en) {
   out.push({ k: 'sys', label: '设备自带语音', note: '平板自己的英文语音' });
   return { cands: out, ok: !!ph };
 }
+const PV_HELP = `格式：<code>英文谚语 中文意思</code>，每行一条。后面可以用 <code>|</code> 写字面意思（帮孩子理解为什么这么说），末尾加一个表情当图片。<br>
+  "关键词填空"和听写要写的那个词，用 <code>[ ]</code> 括起来；不写的话，应用会自动挑一个最长的词。<br>
+  例如：<code>Practice makes [perfect]. 熟能生巧 | 练习造就完美 🎹</code>。也可以直接粘贴表格（每行 <code>| 英文 | 中文 |</code>）。<br>
+  学法：认识 → 听音选意思 → 看中文选谚语 → 词块排句 → 关键词填空；标点和大小写都不算错。`;
 function vParent() {
   const tabs = [['tasks', '📝 任务'], ['share', '📲 分享与导入'], ['report', '📊 报告'], ['set', '⚙️ 设置与备份']];
   let body = '';
@@ -2625,7 +2768,7 @@ function render() {
     : view === 'dictres' && DRES ? vDictResult() : view === 'gate' ? vGate() : view === 'import' && PENDING ? vImport() : vParent();
   if (view === 'session') {
     const t = curTask();
-    if (!SESS.fb && t.type !== 'pick' && t.type !== 'sent' && !t.spoken) { t.spoken = true; setTimeout(() => speak(W(t.id).en), 300); }
+    if (!SESS.fb && t.type !== 'pick' && t.type !== 'sent' && t.type !== 'ppick' && !t.spoken) { t.spoken = true; setTimeout(() => speak(W(t.id).en), 300); }
     const ti = document.getElementById('ti'); if (ti && !SESS.fb) { try { ti.focus({ preventScroll: true }); ti.setSelectionRange(ti.value.length, ti.value.length); } catch (e) {} }
     if (SESS.fb) { const fb = document.querySelector('.fb'); if (fb && fb.scrollIntoView) setTimeout(() => { try { fb.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }, 30); }
   }
@@ -2668,7 +2811,7 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (view !== 'session' || !SESS || SESS.fb || !useKb()) return;
-  const t = curTask(); if (!t || t.type !== 'type' || e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = curTask(); if (!t || (t.type !== 'type' && t.type !== 'pkey') || e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key === 'Enter') { e.preventDefault(); App.submit(); }
   else if (e.key === 'Backspace') { e.preventDefault(); App.bs(); }
   else if (/^[a-zA-Z' \-]$/.test(e.key)) { e.preventDefault(); App.key(e.key.toLowerCase()); }
@@ -2695,7 +2838,7 @@ const App = {
     const t = curTask(); if (SESS.fb || t.ans.includes(pi)) return;
     t.ans.push(pi);
     if (t.ans.length === t.pool.length) {
-      const w = W(t.id), s = t.ans.map(i => t.pool[i]).join(w.type === 'phrase' ? ' ' : '');
+      const w = W(t.id), s = t.ans.map(i => t.pool[i]).join(w.type === 'phrase' || w.type === 'proverb' ? ' ' : '');
       if (norm(s) !== norm(w.en)) { t.ans = []; answer(false, s); } else answer(true);
     } else render();
   },
@@ -2703,13 +2846,13 @@ const App = {
   tv(v) { curTask().val = v; },
   key(c) {
     if (view === 'dict' && DICT) { DICT.cur = ((DICT.cur || '') + c).slice(0, 40); const el = document.getElementById('tvw'); if (el) el.innerHTML = kbDisp(DICT.cur, false); return; }
-    const t = SESS && curTask(); if (!t || t.type !== 'type' || SESS.fb) return;
+    const t = SESS && curTask(); if (!t || (t.type !== 'type' && t.type !== 'pkey') || SESS.fb) return;
     t.val = ((t.val || '') + c).slice(0, 40);
     const el = document.getElementById('tvw'); if (el) el.innerHTML = kbDisp(t.val, false);
   },
   bs() {
     if (view === 'dict' && DICT) { DICT.cur = (DICT.cur || '').slice(0, -1); const el = document.getElementById('tvw'); if (el) el.innerHTML = kbDisp(DICT.cur, false); return; }
-    const t = SESS && curTask(); if (!t || t.type !== 'type' || SESS.fb) return;
+    const t = SESS && curTask(); if (!t || (t.type !== 'type' && t.type !== 'pkey') || SESS.fb) return;
     t.val = (t.val || '').slice(0, -1);
     const el = document.getElementById('tvw'); if (el) el.innerHTML = kbDisp(t.val, false);
   },
@@ -2765,15 +2908,15 @@ const App = {
   setKb(v, el) { S.settings.kb = v; save(); segOn(el); },
   hint() {
     const t = curTask(), w = W(t.id); if (SESS.fb) return;
-    const cur = t.val || ''; let k = 0;
-    while (k < cur.length && k < w.en.length && cur[k].toLowerCase() === w.en[k].toLowerCase()) k++;
-    t.val = w.en.slice(0, Math.min(w.en.length, k + 1)); t.hinted = true; render();
+    const tg = t.type === 'pkey' ? w.key : w.en, cur = t.val || ''; let k = 0;
+    while (k < cur.length && k < tg.length && cur[k].toLowerCase() === tg[k].toLowerCase()) k++;
+    t.val = tg.slice(0, Math.min(tg.length, k + 1)); t.hinted = true; render();
   },
   submit() {
     const t = curTask(), w = W(t.id); if (SESS.fb) return;
     const ti = useKb() ? null : document.getElementById('ti'), v = (ti && ti.value != null ? ti.value : t.val) || '';
     if (!v.trim()) { toast('先写一写哦 ✏️'); return; }
-    t.val = v; const ok = norm(v) === norm(w.en); answer(ok, ok ? '' : v);
+    t.val = v; const ok = norm(v) === norm(t.type === 'pkey' ? w.key : w.en); answer(ok, ok ? '' : v);
   },
 
   /* ---- 家长入口 ---- */
@@ -2794,12 +2937,22 @@ const App = {
     delArm = false; PIC = null; PRON = null;
     if (tid === 'new') {
       const used = new Set(S.tasks.map(t => t.icon));
-      EDIT = { icon: ICONS.find(i => !used.has(i)) || ICONS[0], required: !S.tasks.some(t => t.required), status: 'active' };
-    } else if (tid) { const t = TK(tid); if (!t) return; EDIT = { icon: t.icon, required: t.required, status: t.status }; }
+      EDIT = { icon: ICONS.find(i => !used.has(i)) || ICONS[0], required: !S.tasks.some(t => t.required), status: 'active', kind: 'word' };
+    } else if (tid) { const t = TK(tid); if (!t) return; EDIT = { icon: t.icon, required: t.required, status: t.status, kind: t.kind || 'word' }; }
     PEDIT = tid || null; render();
     try { window.scrollTo(0, 0); } catch (e) {}
   },
   edIcon(ic, el) { EDIT.icon = ic; segOn(el); },
+  edKind(k, el) {
+    EDIT.kind = k === 'proverb' ? 'proverb' : 'word'; segOn(el); PIC = null;
+    const pv = EDIT.kind === 'proverb', $$ = id => document.getElementById(id);
+    if ($$('e_pvhelp')) $$('e_pvhelp').style.display = pv ? '' : 'none';
+    if ($$('e_wdhelp')) $$('e_wdhelp').style.display = pv ? 'none' : '';
+    if ($$('e_rawl')) $$('e_rawl').textContent = pv ? '谚语（每行一条）' : '单词 / 词组（每行一个）';
+    if ($$('e_raw')) $$('e_raw').placeholder = pv ? 'Practice makes [perfect]. 熟能生巧 | 练习造就完美 🎹' : 'apple 苹果\nplay football 踢足球 ⚽';
+    if (pv && EDIT.icon === '📘' && !S.tasks.some(t => t.icon === '📜')) EDIT.icon = '📜';
+    App.edPlan();
+  },
   edReq(v, el) { EDIT.required = v; segOn(el); },
   edStatus(s, el) { EDIT.status = s; segOn(el); },
   edPlan() {
@@ -2809,21 +2962,22 @@ const App = {
     const dl = (document.getElementById('e_dl') || {}).value || '';
     if (sl) { sl.disabled = unl; if (sl.style) sl.style.opacity = unl ? '.35' : ''; }
     const nv = document.getElementById('e_npdv'); if (nv) nv.textContent = unl ? '不限' : npd + ' 个';
-    const ws = parseList(raw), n = ws.filter(w => !(t && (t.progress[w.id] || EMPTY_P).box)).length;
+    const ws = parseKind(EDIT.kind, raw), n = ws.filter(w => !(t && (t.progress[w.id] || EMPTY_P).box)).length;
     const el = document.getElementById('e_plan'); if (el) el.innerHTML = ws.length ? planText(n, npd, dl) : '填好单词后，这里会显示大约几天能学完。';
-    const ee = document.getElementById('e_ex'); if (ee) ee.innerHTML = exInfo(ws);
+    const ee = document.getElementById('e_ex'); if (ee) ee.innerHTML = EDIT.kind === 'proverb' ? '' : exInfo(ws);
+    const ph = document.getElementById('e_pvhelp'); if (ph && EDIT.kind === 'proverb') ph.innerHTML = PV_HELP + (ws.length ? `<br><b>识别到 ${ws.length} 条：</b>` + ws.slice(0, 20).map(w => `${w.emo || ''} ${blankSent(w)}`).join('　/　') : '');
   },
   edClearDl() { const el = document.getElementById('e_dl'); if (el) el.value = ''; App.edPlan(); },
   saveTask() {
     const name = ((document.getElementById('e_name') || {}).value || '').trim();
     if (!name) { toast('请给任务起个名字'); return; }
-    const raw = (document.getElementById('e_raw') || {}).value || '', ws = parseList(raw);
-    if (!ws.length) { toast('没有识别到单词，请检查格式'); return; }
+    const raw = (document.getElementById('e_raw') || {}).value || '', ws = parseKind(EDIT.kind, raw);
+    if (!ws.length) { toast(EDIT.kind === 'proverb' ? '没有识别到谚语，请检查格式' : '没有识别到单词，请检查格式'); return; }
     const npd = (document.getElementById('e_unl') || {}).checked ? 0 : (Number((document.getElementById('e_npd') || {}).value) || 5), dl = (document.getElementById('e_dl') || {}).value || '';
     let msg;
     if (PEDIT === 'new') {
-      const t = newTask({ name, icon: EDIT.icon, required: EDIT.required, rawList: raw, words: ws, newPerDay: npd, deadline: dl });
-      S.tasks.push(t); msg = `已创建任务「${t.name}」，共 ${ws.length} 个`;
+      const t = newTask({ name, icon: EDIT.icon, required: EDIT.required, rawList: raw, words: ws, newPerDay: npd, deadline: dl, kind: EDIT.kind });
+      S.tasks.push(t); msg = `已创建任务「${t.name}」，共 ${ws.length} ${unitOf(t)}`;
     } else {
       const t = TK(PEDIT); if (!t) return;
       Object.assign(t, { name: name.slice(0, 20), icon: EDIT.icon, required: EDIT.required, rawList: raw, words: ws,
@@ -2859,10 +3013,11 @@ const App = {
       render(); return;
     }
     const sc = dictScopes(t);
-    DSEL = { tid, mode: (DSEL && DSEL.tid === tid && DSEL.mode) || S.settings.dictMode || 'audio', scope: sc.some(x => x.id === 'learned') ? 'learned' : 'all' };
+    let dm = (DSEL && DSEL.tid === tid && DSEL.mode) || S.settings.dictMode || 'audio'; if (!dModes(t)[dm]) dm = 'audio';
+    DSEL = { tid, mode: dm, scope: sc.some(x => x.id === 'learned') ? 'learned' : 'all' };
     view = 'dictstart'; render();
   },
-  dictMode(m) { if (!DMODE[m]) return; DSEL.mode = m; S.settings.dictMode = m; save(); render(); },
+  dictMode(m) { const t = DSEL && TK(DSEL.tid); if (!dModes(t)[m]) return; DSEL.mode = m; if (!isPV(t)) S.settings.dictMode = m; save(); render(); },
   dictScope(s) { DSEL.scope = s; render(); },
   dictGo() {
     const t = TK(DSEL.tid); if (!t) return;
@@ -2941,18 +3096,19 @@ const App = {
   impName(v) { IMP.name = v; },
   applyImport() {
     const p = PENDING; if (!p) return;
-    const ws = parseList(p.l); if (!ws.length) { toast('没有识别到单词'); return; }
+    const pk = p.k === 'p' ? 'proverb' : 'word', mt = S.tasks.filter(t => (t.kind || 'word') === pk);
+    const ws = parseKind(pk, p.l); if (!ws.length) { toast('没有识别到单词'); return; }
     const cb = document.getElementById('imp_set'), useGrade = !!(cb && cb.checked);
     let msg;
-    if (IMP.mode === 'merge' && S.tasks.length) {
-      const t = TK(IMP.tgt) || S.tasks[0], before = t.words.length;
-      t.rawList = t.rawList.trim() + '\n' + p.l.trim(); t.words = parseList(t.rawList);
+    if (IMP.mode === 'merge' && mt.length) {
+      const t = mt.find(x => x.id === IMP.tgt) || mt[0], before = t.words.length;
+      t.rawList = t.rawList.trim() + '\n' + p.l.trim(); t.words = parseKind(t.kind, t.rawList);
       msg = `已合并到「${t.name}」：新增 ${t.words.length - before} 个，现在共 ${t.words.length} 个`;
     } else {
       const name = String(IMP.name || p.n || '新任务').trim().slice(0, 20) || '新任务';
       const used = new Set(S.tasks.map(t => t.icon));
       const t = newTask({ name, icon: ICONS.includes(p.i) ? p.i : (ICONS.find(i => !used.has(i)) || ICONS[0]),
-        required: p.r != null ? !!p.r : !S.tasks.some(x => x.required), rawList: p.l, words: ws, newPerDay: p.d != null ? p.d : 5, deadline: p.dl });
+        required: p.r != null ? !!p.r : !S.tasks.some(x => x.required), rawList: p.l, words: ws, newPerDay: p.d != null ? p.d : 5, deadline: p.dl, kind: pk });
       S.tasks.push(t); msg = `已新建任务「${t.name}」，共 ${ws.length} 个`;
     }
     if (useGrade && GRADE[p.g]) S.settings.grade = p.g;
