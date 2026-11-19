@@ -605,6 +605,36 @@ giraffe 长颈鹿
 rabbit 兔子
 zebra 斑马`;
 // 谚语：英文 中文 | 字面意思 图；[ ] 里是"关键词填空"和听写要写的词
+const WEEK7_LIST = `watch 手表；看；观看 ⌚ | I watch TV after dinner. 我晚饭后看电视。
+window 窗；窗户 🪟 | Please open the window. 请打开窗户。
+blackboard 黑板 🟩 | Look at the blackboard, please. 请看黑板。
+chair 椅子 🪑 | The cat is on the chair. 猫在椅子上。
+desk 书桌；写字台；办公桌 🔤 | My book is on the desk. 我的书在书桌上。
+dictionary 词典；字典 📕 | I can find new words in the dictionary. 我能在词典里查到生词。
+door 门 🚪 | Close the door, please. 请关上门。
+eraser 橡皮；黑板擦 🧽 | Can I use your eraser? 我能用一下你的橡皮吗？
+picture 图画；照片 🖼️ | This is a picture of my family. 这是我家人的照片。
+ruler 尺 📏 | My ruler is in my pencil box. 我的尺子在铅笔盒里。
+shelf 架子；隔板 📚 | The books are on the shelf. 书在架子上。
+woman 成年女子；妇女 👩 | That woman is my teacher. 那位女士是我的老师。
+child 儿童；子女 🧒 | The child is reading a book. 那个孩子在看书。
+under 在……下面 ⬇️ | The dog is under the desk. 狗在书桌下面。
+next to 紧邻；在……近旁 | Please sit next to me. 请坐在我旁边。
+between 在……中间；介于……之间 | The ball is between the two boxes. 球在两个盒子中间。
+bag 书包；袋子 🎒 | Put your book in your bag. 把书放进书包里。
+box 盒；箱 📦 | There is a cat in the box. 盒子里有一只猫。
+brush 刷子；画笔；刷 🖌️ | I brush my teeth every morning. 我每天早上刷牙。
+close 关；关闭 🔒 | Close your eyes and listen. 闭上眼睛听。
+look at 看 👀 | Look at the picture. 看这幅图。
+read 读；朗读 📖 | Let's read the story together. 我们一起读故事吧。
+dialogue 对话；对白 💬 | Listen to the dialogue. 听对话。
+listen 听；倾听 👂 | Please listen to the teacher. 请听老师讲。
+me 我 🙋 | Please give the pen to me. 请把笔给我。
+stand 站起来；站立 🧍 | Don't stand on the chair. 不要站在椅子上。
+up 向上；往上 ⬆️ | Look up at the sky. 抬头看天空。
+stand up 站起；站立；起立 | Stand up, please. 请起立。
+open 开；打开 🔓 | Open your book, please. 请打开你的书。
+sit 坐 💺 | Please sit down. 请坐下。`;
 const PROV_LIST = `Actions speak [louder] than words. 行动胜于言辞 | 行动比话说得更响 🏃
 Practice makes [perfect]. 熟能生巧 | 练习造就完美 🎹
 Where there is a [will], there is a way. 有志者事竟成 | 有意愿的地方就有路 🛤️
@@ -682,7 +712,10 @@ const SEEDS = [
   { seed: 'unlimited1', setUnlimited: { tunit5: 6, ttask2: 4 } },
   // 已经在用的设备：给两个内置任务补上例句（不影响进度）
   { seed: 'sent1', addEx: { tunit5: 'EX_U5', ttask2: 'EX_T2' } },
-  { id: 'tprov1', seed: 'proverb1', after: 'ttask2', name: '谚语学习', icon: '📜', kind: 'proverb', required: true, rawList: PROV_LIST, newPerDay: 4 }
+  { id: 'tprov1', seed: 'proverb1', after: 'ttask2', name: '谚语学习', icon: '📜', kind: 'proverb', required: true, rawList: PROV_LIST, newPerDay: 4 },
+  { id: 'tweek7', seed: 'week7', after: 'tprov1', name: 'Week 7 单词', icon: '📙', required: true, rawList: WEEK7_LIST, newPerDay: 0 },
+  // Week 7 里的 close（关）、read（读）都是动词，先把读音定好；家长已经校正过的不动
+  { seed: 'week7pron', setPron: { close: { k: 'ipa', ipa: 'klˈoʊz', src: '人工整理（动词：关上）' }, read: { k: 'ipa', ipa: 'ɹˈiːd', src: '人工整理（读，现在）' } } }
 ];
 const SEED_IDS = ['nosample', ...SEEDS.map(x => x.seed)];
 
@@ -916,7 +949,7 @@ function newTask(o) {
 }
 function initState() {
   return { v: 2, settings: { grade: 'mid', nick: '小勇士', avatar: '🦁', kb: 'auto', sentOn: true, tts: 'std', accent: 'us', icons: 'fluent', ttsDl: '' },
-    tasks: SEEDS.filter(x => x.name && !x.mergeInto).map(x => newTask(x)), seeds: SEED_IDS.slice(), stars: 0, starsEarned: 0, avatars: FREE_AV.slice(), dictLog: [], dictBest: {}, prons: {}, resume: {}, streak: 0, lastStudy: null, dayOffset: 0, lastBackup: null };
+    tasks: SEEDS.filter(x => x.name && !x.mergeInto).map(x => newTask(x)), seeds: SEED_IDS.slice(), stars: 0, starsEarned: 0, avatars: FREE_AV.slice(), dictLog: [], dictBest: {}, prons: JSON.parse(JSON.stringify(Object.assign({}, ...SEEDS.filter(x => x.setPron).map(x => x.setPron)))), resume: {}, streak: 0, lastStudy: null, dayOffset: 0, lastBackup: null };
 }
 // 兼容旧版本（只有一份词表）的数据和备份：自动变成第一个任务
 function normalize(st) {
@@ -964,6 +997,11 @@ function applySeeds() {
     S.seeds.push(sd.seed); changed = true;
     if (sd.addEx) {
       Object.entries(sd.addEx).forEach(([id, name]) => { const t = TK(id); if (!t) return; t.rawList = withEx(t.rawList, name === 'EX_U5' ? EX_U5 : EX_T2); t.words = parseList(t.rawList); });
+      return;
+    }
+    if (sd.setPron) {
+      S.prons = S.prons || {};
+      Object.entries(sd.setPron).forEach(([k, v]) => { const c = cleanPron(v); if (c && !S.prons[k]) S.prons[k] = c; });
       return;
     }
     if (sd.setUnlimited) {
