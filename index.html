@@ -15,6 +15,14 @@
 </head>
 <body>
 <div id="boot" style="font:700 22px sans-serif;padding:24px;">🦁 单词小勇士 · 加载中…</div>
+<script>
+// 启动出错时不再白屏：显示原因，并提醒数据还在
+window.addEventListener('error', function (e) {
+  var b = document.getElementById('boot'); if (!b || window.__WH_OK) return;
+  b.style.display = 'block';
+  b.innerHTML = '😵 单词小勇士打开时出错了<div style="font-weight:400;font-size:16px;margin-top:10px;line-height:1.6">学习记录还保存在这台平板上，没有丢。请把这个页面截图发给家长。<br><span style="color:#999;font-size:13px">' + String(e.message || e.error || '').replace(/[<>&]/g, '') + '</span></div>';
+});
+</script>
 <style>
 :root{
   --bg:#FFF8EC; --card:#FFFFFF; --ink:#2D3047; --ink2:#6B6F85; --line:#F0E4D2;
@@ -1043,7 +1051,7 @@ function nextGoal(bal) {
 }
 const keyOf = (tid, wid) => tid + SEP + wid;
 const splitKey = k => { const i = k.indexOf(SEP); return [k.slice(0, i), k.slice(i + 1)]; };
-const TK = tid => S.tasks.find(t => t.id === tid);
+function TK(tid) { return S.tasks.find(t => t.id === tid); }
 const taskOfKey = k => TK(splitKey(k)[0]);
 const W = k => { const [tid, wid] = splitKey(k), t = TK(tid); return (t && t.words.find(w => w.id === wid)) || { id: wid, en: wid, zh: '', emo: '', type: 'word' }; };
 const getP = k => { const [tid, wid] = splitKey(k), t = TK(tid); return (t && t.progress[wid]) || EMPTY_P; };
@@ -1157,8 +1165,8 @@ const sfx = { ok: () => tone([660, 880, 1320], .1, 'triangle'), retry: () => ton
 /* ========== 校正读音 ==========
    S.prons：{ 单词(小写): { k: 'ipa', ipa, src } 按音标读 | { k: 'sys' } 用设备自带语音 }，学习、复习、听写都按这个读 */
 const PRON_LIB = {"bedtime":[["bˈɛdtaɪm","人工整理"]],"dinner":[["dˈɪnɚ","人工整理"]],"read":[["ɹˈiːd","读（现在）"],["ɹˈɛd","读过（过去）"]],"live":[["lˈɪv","居住（动词）"],["lˈaɪv","活的；现场的"]],"wind":[["wˈɪnd","风"],["wˈaɪnd","缠绕；上发条"]],"close":[["klˈoʊz","关上（动词）"],["klˈoʊs","近的"]],"use":[["jˈuːz","使用（动词）"],["jˈuːs","用途（名词）"]],"record":[["ɹˈɛkɚd","记录；唱片（名词）"],["ɹɪkˈɔːɹd","录制（动词）"]],"present":[["pɹˈɛzənt","礼物；现在的"],["pɹɪzˈɛnt","颁发；展示（动词）"]],"tear":[["tˈɪɹ","眼泪"],["tˈɛɹ","撕（动词）"]],"lead":[["lˈiːd","带领"],["lˈɛd","铅"]],"bow":[["bˈaʊ","鞠躬"],["bˈoʊ","弓；蝴蝶结"]],"minute":[["mˈɪnɪt","分钟"],["maɪnˈuːt","微小的"]],"row":[["ɹˈoʊ","一排；划船"],["ɹˈaʊ","吵架"]],"object":[["ˈɑːbdʒɛkt","物体（名词）"],["əbdʒˈɛkt","反对（动词）"]],"desert":[["dˈɛzɚt","沙漠"],["dɪzˈɜːɹt","抛弃（动词）"]],"wound":[["wˈuːnd","伤口"],["wˈaʊnd","缠绕（wind 的过去式）"]],"project":[["pɹˈɑːdʒɛkt","项目（名词）"],["pɹədʒˈɛkt","投射（动词）"]],"produce":[["pɹədˈuːs","生产（动词）"],["pɹˈoʊduːs","农产品（名词）"]],"content":[["kˈɑːntɛnt","内容（名词）"],["kəntˈɛnt","满意的"]],"refuse":[["ɹɪfjˈuːz","拒绝（动词）"],["ɹˈɛfjuːs","垃圾（名词）"]],"subject":[["sˈʌbdʒɛkt","科目；主题（名词）"],["səbdʒˈɛkt","使服从（动词）"]],"excuse":[["ɪkskjˈuːz","原谅（动词）"],["ɪkskjˈuːs","借口（名词）"]],"polish":[["pˈɑːlɪʃ","擦亮"],["pˈoʊlɪʃ","波兰的"]]};
-const pronKey = t => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim();
-const pronOf = t => (S.prons || {})[pronKey(t)] || null;
+function pronKey(t) { return String(t || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+function pronOf(t) { return (S.prons || {})[pronKey(t)] || null; }
 function cleanPron(p) {
   if (!p || typeof p !== 'object') return null;
   if (p.k === 'sys') return { k: 'sys' };
@@ -3312,6 +3320,7 @@ if (isStandalone() && navigator.storage && navigator.storage.persist) navigator.
   const A = window.WH_AVATARS; st.textContent = Object.keys(A).map(k => `.avp-${k}{background-image:url(${A[k]})}`).join('\n');
   try { (document.head || document.body).appendChild(st); } catch (e) {}
 })();
+window.__WH_OK = true;
 emjStart();
 render();
 checkHash();
