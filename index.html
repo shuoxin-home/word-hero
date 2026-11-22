@@ -400,6 +400,8 @@ select.t{height:46px;background:#fff}
 .opt.zhopt{font-size:20px;line-height:1.35;min-height:72px;padding:10px 14px;font-weight:700}
 .prov-sent{font-size:26px}
 @media (max-width:620px){ .opt-grid.wide{grid-template-columns:1fr!important} .prov-big{font-size:26px} .prov-sent{font-size:21px} .opt.prov,.opt.zhopt{font-size:17px;min-height:56px} }
+/* 再练一遍 */
+.btn.again{background:var(--blue-l);color:var(--blue-d);box-shadow:0 3px 0 rgba(47,111,224,.25)}
 </style>
 
 <div id="app"><div id="fx"></div><div id="view"></div></div>
@@ -944,7 +946,8 @@ function newTask(o) {
     deadline: /^\d{4}-\d{2}-\d{2}$/.test(o.deadline || '') ? o.deadline : '',
     status: STATUS[o.status] ? o.status : 'active',
     progress: (o.progress && typeof o.progress === 'object') ? o.progress : {},
-    daily: (o.daily && o.daily.date) ? { date: o.daily.date, newDone: Number(o.daily.newDone) || 0 } : null
+    daily: (o.daily && o.daily.date) ? { date: o.daily.date, newDone: Number(o.daily.newDone) || 0 } : null,
+    again: (o.again && Array.isArray(o.again.done)) ? { done: o.again.done.map(String).slice(0, 2000), round: Math.max(1, Number(o.again.round) || 1) } : null
   };
 }
 function initState() {
@@ -1065,6 +1068,21 @@ const dueOf = t => t.status === 'paused' ? [] : t.words.filter(w => isDue(t.prog
 // 首页显示的任务：进行中的，加上已归档但还有词要复习的
 const homeTasks = () => S.tasks.filter(t => t.status === 'active' || (t.status === 'archived' && dueOf(t).length));
 const hasWork = t => !!(dueOf(t).length || pickNew(t).length);
+/* ---- 再练一遍：任务全部学完后，按组把学新词的整套题再走一遍 ----
+   t.again = { done: [已经再练过的词], round: 第几遍 }；练对的词盒子不变，练错的进错词本、退回盒子 1 */
+const againOn = t => !!(t && t.status === 'active' && t.words.length && !unlearned(t).length);
+function againState(t) {
+  const ids = new Set(t.words.map(w => w.id));
+  if (!t.again || typeof t.again !== 'object') t.again = { done: [], round: 1 };
+  t.again.done = (Array.isArray(t.again.done) ? t.again.done : []).filter(id => ids.has(id));
+  t.again.round = Math.max(1, Number(t.again.round) || 1);
+  return t.again;
+}
+function pickAgain(t) {
+  const a = againState(t), done = new Set(a.done);
+  return t.words.filter(w => !done.has(w.id)).slice(0, isPV(t) ? 4 : grpSize()).map(w => keyOf(t.id, w.id));
+}
+const againLeft = t => t.words.length - againState(t).done.length;
 const dueReviews = () => reviewTasks().flatMap(t => t.words.filter(w => isDue(t.progress[w.id])).map(w => keyOf(t.id, w.id)));
 const wrongList = () => S.tasks.flatMap(t => t.words.filter(w => pOf(t, w).inWrong).map(w => keyOf(t.id, w.id)));
 // 今天"打卡"的标准：复习做完 + 所有必做任务的新词做完（选做不影响）
@@ -1488,14 +1506,14 @@ function prepare(t) {
 }
 
 /* ---- 中途退出的进度：每做完一题就存一次，下次从中断处继续 ---- */
-const sessKey = (mode, tid) => (mode === 'task' || (mode === 'review' && tid)) ? mode + ':' + tid : mode;
+const sessKey = (mode, tid) => (mode === 'task' || mode === 'again' || (mode === 'review' && tid)) ? mode + ':' + tid : mode;
 function persistSess(skipCurrent) {
   if (!SESS || view !== 'session') return;
   S.resume = S.resume || {};
   S.resume[sessKey(SESS.mode, SESS.tid)] = {
     mode: SESS.mode, tid: SESS.tid || null, i: SESS.i + (skipCurrent ? 1 : 0),
     tasks: SESS.tasks.map(t => ({ type: t.type, id: t.id, retry: t.retry || 0 })),
-    results: SESS.results, stars: SESS.stars, newIds: SESS.newIds, reviewIds: SESS.reviewIds, at: today()
+    results: SESS.results, stars: SESS.stars, half: SESS.half || 0, newIds: SESS.newIds, reviewIds: SESS.reviewIds, at: today()
   };
   save();
 }
@@ -1506,7 +1524,7 @@ function resumeLeft(key) {
 function restoreSess(rs) {
   const key = sessKey(rs.mode, rs.tid);
   if (!rs || !Array.isArray(rs.tasks)) return false;
-  if (rs.mode === 'task' && !(TK(rs.tid) && TK(rs.tid).status === 'active')) return false;
+  if ((rs.mode === 'task' || rs.mode === 'again') && !(TK(rs.tid) && TK(rs.tid).status === 'active')) return false;
   if (rs.mode === 'review' && rs.tid && !TK(rs.tid)) return false;
   // 家长改过词表时，去掉已经不存在的词
   const valid = k => { const [tid, wid] = splitKey(String(k)), t = TK(tid); return !!(t && t.words.some(w => w.id === wid)); };
@@ -1515,13 +1533,16 @@ function restoreSess(rs) {
   const newIds = (rs.newIds || []).filter(valid), reviewIds = (rs.reviewIds || []).filter(valid);
   if (!items.length || (!newIds.length && !reviewIds.length)) { delete S.resume[key]; save(); return false; }
   SESS = { mode: rs.mode, tid: rs.tid || null, tasks: items, i: Math.max(0, i), results: rs.results || {},
-    stars: Number(rs.stars) || 0, newIds, reviewIds, fb: null, tok: 0 };
+    stars: Number(rs.stars) || 0, half: Number(rs.half) || 0, newIds, reviewIds, fb: null, tok: 0 };
   return true;
 }
 
 function start(mode, tid) {
   stopSpeech(true);
-  if (mode === 'task') {
+  if (mode === 'again') {
+    const rs = (S.resume || {})['again:' + tid];
+    if (rs && restoreSess(rs)) return resumeGo();
+  } else if (mode === 'task') {
     const t = TK(tid); if (!t) return;
     // 优先级：没做完的复习 → 没做完的新词 → 这个任务到期的复习 → 新词
     if (S.resume && S.resume['review:' + tid] && restoreSess(S.resume['review:' + tid])) return resumeGo();
@@ -1536,6 +1557,14 @@ function start(mode, tid) {
     task = tid ? TK(tid) : null;
     reviewIds = shuffle(task ? dueOf(task) : dueReviews()).slice(0, REVIEW_BATCH);   // 一次最多复习 20 个，多的分几次做
     reviewIds.forEach(k => items.push(mk(recallOf(k, g), k)));
+  } else if (mode === 'again') {
+    task = TK(tid); if (!againOn(task)) return;
+    reviewIds = pickAgain(task);
+    if (!reviewIds.length) { againState(task).done = []; againState(task).round++; reviewIds = pickAgain(task); }
+    reviewIds.forEach(k => items.push(mk('card', k)));
+    const steps = isPV(task) ? PV_STEPS.slice() : g.steps.slice();
+    if (!isPV(task) && S.settings.sentOn !== false) steps.splice(steps.indexOf('pick') + 1, 0, 'sent');
+    steps.forEach(st => shuffle(reviewIds).forEach(k => { if (st === 'sent' && !(W(k).ex || []).length) return; items.push(mk(st, k)); }));
   } else if (mode === 'task') {
     task = TK(tid); if (!task) return;
     newIds = pickNew(task);
@@ -1582,7 +1611,9 @@ function answer(ok, yours) {
   const t = curTask(), w = W(t.id), p = prog(t.id);
   const r = SESS.results[t.id] || (SESS.results[t.id] = { errors: 0 });
   if (ok) {
-    const gain = (t.retry === 0 && !t.hinted) ? 1 : 0;
+    let gain = (t.retry === 0 && !t.hinted) ? 1 : 0;
+    // 再练一遍：每答对 2 道得 1 颗
+    if (gain && SESS.mode === 'again') { SESS.half = (SESS.half || 0) + 1; gain = SESS.half % 2 === 0 ? 1 : 0; }
     SESS.stars += gain; addStars(gain); p.right++;
     SESS.fb = { ok: true, gain }; sfx.ok(); setTimeout(() => speak(sayText(t)), 380);
     startCountdown(() => !!(SESS && SESS.fb && SESS.fb.ok), next);
@@ -1607,6 +1638,15 @@ function finish() {
   if (SESS.mode === 'task') {
     SESS.newIds.forEach(k => { const p = prog(k); p.box = 1; p.due = addDays(t0, 1); });
     const tk = TK(SESS.tid); if (tk) tDaily(tk).newDone += SESS.newIds.length;
+  } else if (SESS.mode === 'again') {
+    // 练对的：盒子不变；练错的：进错词本（答题时已经记了），退回盒子 1 明天复习
+    const tk = TK(SESS.tid);
+    SESS.reviewIds.forEach(k => {
+      const p = prog(k), e = (SESS.results[k] || {}).errors || 0;
+      if (e) { p.box = 1; p.due = addDays(t0, 1); }
+      if (tk) { const a = againState(tk), id = splitKey(k)[1]; if (!a.done.includes(id)) a.done.push(id); }
+    });
+    if (tk) { SESS.againLeft = againLeft(tk); SESS.againRound = againState(tk).round; SESS.againWrong = SESS.reviewIds.filter(k => (SESS.results[k] || {}).errors).length; }
   } else if (SESS.mode === 'review') {
     SESS.reviewIds.forEach(k => {
       const p = prog(k), e = (SESS.results[k] || {}).errors || 0;
@@ -1617,11 +1657,12 @@ function finish() {
     SESS.reviewIds.forEach(k => { if (!((SESS.results[k] || {}).errors)) prog(k).inWrong = false; });
   }
   SESS.dayDone = false;
-  if (S.lastStudy !== t0 && dayComplete()) {
+  if (SESS.mode !== 'again' && S.lastStudy !== t0 && dayComplete()) {
     S.streak = (S.lastStudy === addDays(t0, -1)) ? S.streak + 1 : 1; S.lastStudy = t0; SESS.dayDone = true;
   }
   const before = Math.max(0, S.stars - SESS.stars);   // 这一轮开始前的星星
-  SESS.stars += 3; addStars(3); SESS.newAv = nextGoal(before) && !nextGoal(before).ok && nextGoal().ok; save(); sfx.done();
+  const bonus = SESS.mode === 'again' ? 1 : 3; SESS.bonus = bonus;
+  SESS.stars += bonus; addStars(bonus); SESS.newAv = nextGoal(before) && !nextGoal(before).ok && nextGoal().ok; save(); sfx.done();
   view = 'done'; render(); confetti();
 }
 
@@ -2054,7 +2095,12 @@ function vTaskCard(t) {
     : rl != null ? `<button class="btn sm orange" ${go}>继续学（${rl ? '还剩 ' + rl + ' 题' : '马上完成'}）→</button>`
     : due.length ? `<button class="btn sm orange" ${go}>先复习 ${Math.min(due.length, REVIEW_BATCH)} 个 →</button>`
     : nw.length ? `<button class="btn sm green" ${go}>${!t.newPerDay && td ? '再学' : '学'} ${nw.length} ${newNoun(t)} →</button>`
-    : !left ? (dictDue(t) ? '' : '<span class="badge done">🏆 全部学完</span>') : '<span class="badge done">✅ 今天完成</span>';
+    : !left ? '' : '<span class="badge done">✅ 今天完成</span>';
+  const agl = resumeLeft('again:' + t.id);
+  const againBtn = !againOn(t) || rvl != null || rl != null || due.length ? ''
+    : agl != null ? `<button class="btn sm again" onclick="App.start('again','${t.id}')">🔁 继续再练（${agl ? '还剩 ' + agl + ' 题' : '马上完成'}）</button>`
+    : `<button class="btn sm again" onclick="App.start('again','${t.id}')">🔁 再练一遍${againState(t).done.length ? `（还剩 ${againLeft(t)} ${unitOf(t)}）` : ''}</button>`;
+  const doneBadge = !left && !due.length && !dictDue(t) && rvl == null && rl == null && agl == null ? '<span class="badge done">🏆 全部学完</span>' : '';
   const info = [`已学 ${learned}/${tot}`];
   if (best) info.push(`<span class="badge dict">听写最好 ${best.c}/${best.n}${best.c === best.n ? ' 💯' : ''}</span>`);
   else if (dictDue(t)) info.push(`<b style="color:var(--purple)">${isPV(t) ? '谚语' : '单词'}都学完了，该听写啦！</b>`);
@@ -2065,7 +2111,7 @@ function vTaskCard(t) {
     <div class="grow"><div class="tname">${esc(t.name)} <span class="badge ${t.required ? 'req' : 'opt'}">${t.required ? '必做' : '选做'}</span>${t.status === 'archived' ? ' <span class="badge new">已归档·只复习</span>' : ''}</div>
       <div class="muted small">${info.join(' · ')}</div>
       <div class="bar thin"><div style="width:${pct}%"></div></div></div>
-    <div class="acts">${act}${dictBtn}</div></div>`;
+    <div class="acts">${act}${doneBadge}${againBtn}${dictBtn}</div></div>`;
 }
 
 function vHome() {
@@ -2109,7 +2155,7 @@ function vSession() {
   let body = '';
   if (t.type === 'card' && w.type === 'proverb') {
     body = `<div class="card center">
-      <span class="tag">新谚语</span>
+      <span class="tag">${SESS.mode === 'again' ? '🔁 再练一遍' : '新谚语'}</span>
       ${bigPic(w)}
       <div class="prov-big">${esc(w.en)}</div>
       <div class="zh">${esc(w.zh)}</div>
@@ -2146,7 +2192,7 @@ function vSession() {
       ${vFb(w)}</div>`;
   } else if (t.type === 'card') {
     body = `<div class="card center">
-      <span class="tag">${w.type === 'phrase' ? '新词组' : '新单词'}</span>
+      <span class="tag">${SESS.mode === 'again' ? '🔁 再练一遍' : w.type === 'phrase' ? '新词组' : '新单词'}</span>
       ${bigPic(w)}
       <div class="word-big ${w.type === 'phrase' ? 'phrase' : ''}">${esc(w.en)}</div>
       <div class="zh">${esc(w.zh)}</div>
@@ -2224,13 +2270,16 @@ function vFb(w) {
 function vDone() {
   const ids = [...new Set([...SESS.newIds, ...SESS.reviewIds])], tk = SESS.tid ? TK(SESS.tid) : null;
   const tname = tk ? tk.icon + ' ' + esc(tk.name) : '';
-  const title = SESS.mode === 'task' ? `${tname || '任务'} 完成啦！` : SESS.mode === 'review' ? `${tname ? tname + ' ' : ''}复习完成啦！` : '错词复习完成！';
+  const title = SESS.mode === 'task' ? `${tname || '任务'} 完成啦！` : SESS.mode === 'again' ? `${tname} 又练了一组！` : SESS.mode === 'review' ? `${tname ? tname + ' ' : ''}复习完成啦！` : '错词复习完成！';
   // 下一步：刚复习完 → 接着学这个任务的新词；刚学完新词 → 先推荐今天还没学过新词的任务，再推荐再学一组
   const cur = tk && hasWork(tk) ? tk : null;
   const others = homeTasks().filter(t => t !== tk && hasWork(t));
   const fresh = others.find(t => !tDaily(t).newDone);
   const nxt = (SESS.mode === 'review' && cur) ? cur : (fresh || cur || others[0]);
-  const nextBtn = !nxt ? ''
+  const nextBtn = SESS.mode === 'again' && tk ? (dueOf(tk).length ? `<button class="btn ghost" onclick="App.start('task','${tk.id}')">这组练错的明天复习，现在先复习 ${Math.min(dueOf(tk).length, REVIEW_BATCH)} 个</button>`
+      : SESS.againLeft ? `<button class="btn ghost" onclick="App.start('again','${tk.id}')">🔁 接着练下一组（还剩 ${SESS.againLeft} ${unitOf(tk)}）</button>`
+      : `<button class="btn ghost" onclick="App.start('again','${tk.id}')">🔁 全部练完啦，从头再练一遍</button>`)
+    : !nxt ? ''
     : nxt !== tk ? `<button class="btn ghost" onclick="App.start('task','${nxt.id}')">休息好了，做 ${nxt.icon} ${esc(nxt.name)}</button>`
     : dueOf(nxt).length ? `<button class="btn ghost" onclick="App.start('task','${nxt.id}')">休息好了，接着复习 ${Math.min(dueOf(nxt).length, REVIEW_BATCH)} 个</button>`
     : SESS.mode === 'review' ? `<button class="btn ghost" onclick="App.start('task','${nxt.id}')">休息好了，学 ${pickNew(nxt).length} ${newNoun(nxt)}</button>`
@@ -2238,10 +2287,11 @@ function vDone() {
   return `<div class="card center">
     <div class="pic">🎉</div>
     <h2>${title}</h2>
-    <div style="font-size:22px;font-weight:800">这一轮得到 ⭐ ${SESS.stars} 颗（含完成奖励 3 颗）</div>
+    <div style="font-size:22px;font-weight:800">这一轮得到 ⭐ ${SESS.stars} 颗（含完成奖励 ${SESS.bonus || 3} 颗）</div>
+    ${SESS.mode === 'again' ? `<div class="muted small">再练一遍时每答对 2 道得 1 颗星。${SESS.againWrong ? `这组有 ${SESS.againWrong} 个练错了，已经放进错词本，明天会复习。` : '这组全部练对了，复习安排不变。'}${SESS.againLeft ? '' : ` 第 ${SESS.againRound} 遍全部练完啦！`}</div>` : ''}
     <div class="learned">${ids.map(k => { const w = W(k); return `<span class="wchip">${w.emo} ${esc(w.en)}</span>`; }).join('')}</div>
     ${SESS.dayDone ? `<div class="all-done">🔥 今天的必做任务全部完成！已经连续 ${S.streak} 天</div>` : ''}
-    ${SESS.mode === 'task' && tk && dictDue(tk) ? `<div class="all-done" style="background:var(--purple-bg)">🎉 「${esc(tk.name)}」的 ${tk.words.length} 个词全部学完啦！来一次听写，看看记住了多少吧～<div style="margin-top:10px"><button class="btn dict" onclick="App.dict('${tk.id}')">📝 去听写</button></div></div>` : ''}
+    ${(SESS.mode === 'task' || SESS.mode === 'again') && tk && dictDue(tk) ? `<div class="all-done" style="background:var(--purple-bg)">🎉 「${esc(tk.name)}」的 ${tk.words.length} 个词全部学完啦！来一次听写，看看记住了多少吧～<div style="margin-top:10px"><button class="btn dict" onclick="App.dict('${tk.id}')">📝 去听写</button></div></div>` : ''}
     ${SESS.newAv ? `<div class="all-done" style="background:var(--yellow-bg)">🎁 星星够换新头像啦！<button class="btn sm green" style="margin-left:8px" onclick="App.shop()">去兑换</button></div>` : ''}
     <div class="rest">👀 闭上眼睛休息一下，再看看远处吧！</div>
     <button class="btn big" onclick="App.home()">回到首页</button>
@@ -3027,7 +3077,7 @@ const App = {
   delTask(el) {
     if (!delArm) { delArm = true; el.textContent = '再点一次确认删除'; return; }
     const t = TK(PEDIT); delArm = false; if (!t) return;
-    S.tasks = S.tasks.filter(x => x.id !== t.id); if (S.resume) { delete S.resume['task:' + t.id]; delete S.resume['review:' + t.id]; delete S.resume[dictKey(t.id)]; } delete S.dictBest[t.id]; save(); PEDIT = null; render(); toast(`已删除「${t.name}」`);
+    S.tasks = S.tasks.filter(x => x.id !== t.id); if (S.resume) { delete S.resume['task:' + t.id]; delete S.resume['again:' + t.id]; delete S.resume['review:' + t.id]; delete S.resume[dictKey(t.id)]; } delete S.dictBest[t.id]; save(); PEDIT = null; render(); toast(`已删除「${t.name}」`);
   },
   tmove(tid, d) {
     const t = TK(tid); if (!t) return;
@@ -3241,7 +3291,7 @@ const App = {
   ffReset() { S.dayOffset = 0; save(); render(); toast('已回到真实日期'); },
   reset() {
     if (!resetArm) { resetArm = true; render(); return; }
-    resetArm = false; S.tasks.forEach(t => { t.progress = {}; t.daily = null; }); S.resume = {};
+    resetArm = false; S.tasks.forEach(t => { t.progress = {}; t.daily = null; t.again = null; }); S.resume = {};
     S.stars = 0; S.starsEarned = 0; S.avatars = FREE_AV.slice(); if (!FREE_AV.includes(S.settings.avatar)) S.settings.avatar = FREE_AV[0];
     S.streak = 0; S.lastStudy = null; S.dayOffset = 0; S.dictLog = []; S.dictBest = {};
     save(); render(); toast('学习进度已重置');
